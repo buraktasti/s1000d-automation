@@ -478,8 +478,19 @@ function buildImfXml(icn){
   objs.push('<icnObject icnObjectIdent="hot0" icnObjectName="0" icnObjectTitle="'+xmlEscape(icn.title||'ANA MONTAJ')+'" objectCoordinates="0 0,0 '+h+','+w+' '+h+','+w+' 0" />');
   const located = icn.records.filter(function(r){ return r.hotspot && r.x!=='' && r.y!==''; });
   located.sort(function(a,b){ return (parseInt(a.hotspot)||0)-(parseInt(b.hotspot)||0); });
+  // D-013: Aynı "Konum" (hotspot) numarasına sahip birden fazla parça satırı olabilir (ör. aynı
+  // konumda iki farklı NSN/parça). icnObjectIdent yalnızca hotspot numarasından türetilirse bu durumda
+  // ikinci satır BİRİNCİSİYLE AYNI icnObjectIdent değerini alır — bu, IMF/ICN metadata dosyasında
+  // yinelenen bir kimlik üretir ve FORSDOC/XSD tarafında reddedilme riski taşır. Yinelenen hotspot
+  // numaralarına harf soneki ekleyerek (b, c, ...) her icnObjectIdent'i benzersiz kılıyoruz;
+  // icnObjectName görünen etiket olarak sade hotspot numarasını korumaya devam ediyor.
+  const usedIdents = {};
   located.forEach(function(r){
-    objs.push('<icnObject icnObjectIdent="hot'+String(r.hotspot).padStart(3,'0')+'" icnObjectName="'+xmlEscape(r.hotspot)+'" icnObjectTitle="'+xmlEscape(r.partName||r.description||'')+'" objectCoordinates="'+imfObjectCoordinates(icn, r)+'" />');
+    const baseIdent = 'hot'+String(r.hotspot).padStart(3,'0');
+    let ident = baseIdent, suffixCode = 98; // 'b'
+    while (usedIdents[ident]){ ident = baseIdent + String.fromCharCode(suffixCode); suffixCode++; }
+    usedIdents[ident] = true;
+    objs.push('<icnObject icnObjectIdent="'+ident+'" icnObjectName="'+xmlEscape(r.hotspot)+'" icnObjectTitle="'+xmlEscape(r.partName||r.description||'')+'" objectCoordinates="'+imfObjectCoordinates(icn, r)+'" />');
   });
   return '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE icnMetadataFile []>\n<icnMetadataFile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_5-0/xml_schema_flat/icnmetadata.xsd">' +
     '<imfIdentAndStatusSection><imfAddress><imfIdent><imfCode imfIdentIcn="'+xmlEscape(icn.code)+'" /><issueInfo issueNumber="'+SETTINGS.issue+'" inWork="00" /></imfIdent>' +
@@ -531,6 +542,8 @@ function importText(text, encodingNote){
   const lengthErrorSamples = [];
   let infoCodeMismatchCount = 0;
   const infoCodeMismatchSamples = [];
+  let dmcFieldMismatchCount = 0;
+  const dmcFieldMismatchSamples = [];
   for (let ri=0; ri<effRows.length; ri++){
     const r = effRows[ri];
     let raw = {};
@@ -569,6 +582,32 @@ function importText(text, encodingNote){
         infoCodeMismatchCount++;
         if (infoCodeMismatchSamples.length < 5) infoCodeMismatchSamples.push('DMC "'+dmc.trim()+'": Excel infoCode="'+excelInfoCode+'" görmezden gelindi, DMC\'den türetilen infoCode="'+infoCode+'" kullanıldı');
       }
+      // D-011: infoCode için uygulanan kural (bkz. yukarısı, D-009) burada mic/sdc/altAltSis/
+      // bilesen/sokum/kkk/bilgiTurevi için de uygulanıyor. Tam DMC geçerliyse (looksLikeDmc yukarıda
+      // zaten doğrulandı), bu alanların TEK güvenilir kaynağı parseDmcString(dmc)'dir (p.*).
+      // Kök neden: Excel'de bu sütunlar sayısal biçimlendirme nedeniyle başındaki sıfırları
+      // kaybedebilir (ör. "0000" -> "0", "00AA" -> Excel'de bozulabilir). `get('x') || p.x` deseni,
+      // Excel'den gelen kısaltılmış ama BOŞ OLMAYAN (dolayısıyla truthy) bir değerin DMC'den doğru
+      // türetilen değerin önüne geçmesine yol açıyordu — bu da dmcLengthError()'ın geçerli satırları
+      // yanlışlıkla reddetmesine (assyCode/sokum için) ve genIpd()/identAndStatus() içinde yanlış
+      // assyCode/subSystemCode/subSubSystemCode/itemLocationCode/infoCodeVariant üretilmesine neden
+      // oluyordu. Şimdi bu alanlar her zaman DMC'den geliyor; Excel'deki karşılık gelen sütun yalnızca
+      // uyuşmazlık durumunda kullanıcıyı uyarmak için okunuyor (excelDmcFieldMismatch* değişkenleri).
+      const dmcFieldChecks = [
+        ['mic', get('mic'), p.mic],
+        ['sdc', get('sdc'), p.sdc],
+        ['altAltSis', get('altAltSis'), p.altAltSis],
+        ['bilesen', get('bilesen'), p.bilesen],
+        ['sokum', get('sokum'), p.sokum],
+        ['kkk', get('kkk'), p.kkk],
+      ];
+      dmcFieldChecks.forEach(function(chk){
+        const excelVal = chk[1];
+        if (excelVal && excelVal !== chk[2]){
+          dmcFieldMismatchCount++;
+          if (dmcFieldMismatchSamples.length < 5) dmcFieldMismatchSamples.push('DMC "'+dmc.trim()+'": Excel '+chk[0]+'="'+excelVal+'" görmezden gelindi, DMC\'den türetilen '+chk[0]+'="'+chk[2]+'" kullanıldı');
+        }
+      });
       raw = {
         dmc: dmc.trim(),
         sns: get('sns') || (p.sysCode+'-'+p.altAltSis+'-'+p.bilesen),
@@ -578,14 +617,14 @@ function importText(text, encodingNote){
         infoCode: infoCode,
         infoName: get('infoName') || INFO_NAMES[infoCode] || '',
         schema: INFO_SCHEMA[infoCode] || get('schema') || 'bilinmeyen',
-        bilgiTurevi: get('bilgiTurevi') || (infoCode + p.infoVar),
-        kkk: get('kkk') || p.kkk,
-        mic: get('mic') || p.mic, sdc: get('sdc') || p.sdc,
+        bilgiTurevi: infoCode + p.infoVar,
+        kkk: p.kkk,
+        mic: p.mic, sdc: p.sdc,
         malzKat: get('malzKat') || p.sysCode.charAt(0),
         sysCode: get('sysCode') || p.sysCode.slice(1),
-        altAltSis: get('altAltSis') || p.altAltSis,
-        bilesen: get('bilesen') || p.bilesen,
-        sokum: get('sokum') || p.sokum,
+        altAltSis: p.altAltSis,
+        bilesen: p.bilesen,
+        sokum: p.sokum,
       };
     }
     const lenErr = dmcLengthError(raw);
@@ -608,6 +647,10 @@ function importText(text, encodingNote){
       msg += ' '+infoCodeMismatchCount+' satırda Excel infoCode sütunu, DMC\'den türetilen infoCode ile uyuşmuyordu; DMC değeri esas alındı.';
       if (infoCodeMismatchSamples.length) msg += ' Örnekler: '+infoCodeMismatchSamples.join(' | ');
     }
+    if (dmcFieldMismatchCount){
+      msg += ' '+dmcFieldMismatchCount+' alanda Excel sütunu (mic/sdc/altAltSis/bilesen/sokum/kkk), DMC\'den türetilen değerle uyuşmuyordu; DMC değeri esas alındı.';
+      if (dmcFieldMismatchSamples.length) msg += ' Örnekler: '+dmcFieldMismatchSamples.join(' | ');
+    }
     statusEl.textContent = msg;
     return;
   }
@@ -622,13 +665,14 @@ function importText(text, encodingNote){
   const encSuffix = encodingNote ? (' [Kodlama: '+encodingNote+']') : '';
   const lenSuffix = lengthSkipped ? (' '+lengthSkipped+' satır proje uzunluk kuralı nedeniyle atlandı (assyCode 4 karakter / disassyCode+disassyCodeVariant toplam 4 karakter olmalı).'+(lengthErrorSamples.length?(' Örnekler: '+lengthErrorSamples.join(' | ')):'')) : '';
   const infoCodeSuffix = infoCodeMismatchCount ? (' '+infoCodeMismatchCount+' satırda Excel infoCode sütunu DMC ile uyuşmuyordu; DMC değeri esas alındı.'+(infoCodeMismatchSamples.length?(' Örnekler: '+infoCodeMismatchSamples.join(' | ')):'')) : '';
+  const dmcFieldSuffix = dmcFieldMismatchCount ? (' '+dmcFieldMismatchCount+' alanda Excel sütunu (mic/sdc/altAltSis/bilesen/sokum/kkk) DMC ile uyuşmuyordu; DMC değeri esas alındı.'+(dmcFieldMismatchSamples.length?(' Örnekler: '+dmcFieldMismatchSamples.join(' | ')):'')) : '';
   if (mode==='dmc-only'){
     statusEl.className='status-box status-warn';
     statusEl.textContent = rows.length + ' satır DMC koduna göre içe aktarıldı (başlık/kategori bilgisi yok, sadece DMC\'den türetildi).' +
-      (skipped? (' '+skipped+' satır tanınamadı.'):'') + lenSuffix + infoCodeSuffix + encSuffix;
+      (skipped? (' '+skipped+' satır tanınamadı.'):'') + lenSuffix + infoCodeSuffix + dmcFieldSuffix + encSuffix;
   } else {
     statusEl.className='status-box status-ok';
-    statusEl.textContent = rows.length + ' satır başarıyla içe aktarıldı.' + (skipped? (' '+skipped+' satır atlandı (geçersiz DMC).'):'') + lenSuffix + infoCodeSuffix + encSuffix;
+    statusEl.textContent = rows.length + ' satır başarıyla içe aktarıldı.' + (skipped? (' '+skipped+' satır atlandı (geçersiz DMC).'):'') + lenSuffix + infoCodeSuffix + dmcFieldSuffix + encSuffix;
   }
 }
 
@@ -876,6 +920,10 @@ function todayParts(){
 function identAndStatus(row, infoName){
   const t = todayParts();
   const parts = row.dmc.split('-');
+  // D-012 GERİ ALINDI: kullanıcının FORSDOC'a daha önce BAŞARIYLA yüklediği gerçek dosyalar
+  // systemCode="GA1" (3 karakter) içeriyordu ve FORSDOC bunu kabul etti. Bu proje/FORSDOC kurulumu
+  // için systemCode her zaman 2 karakter olmalı varsayımı YANLIŞTI (dış/genel S1000D örneklerine
+  // dayanıyordu). DMC'nin ham 3. segmenti olduğu gibi kullanılmaya devam ediyor.
   const sys = parts[2], altAlt = parts[3], bilesen = parts[4], sokum = parts[5];
   const subSys = altAlt.charAt(0), subSubSys = altAlt.charAt(1);
   const disassy = sokum.slice(0,2), disassyVar = sokum.slice(2);
@@ -929,7 +977,18 @@ function brexAttrs(){
   if (p.length<8) return 'modelIdentCode="S1000D" systemDiffCode="A" systemCode="04" subSystemCode="1" subSubSystemCode="0" assyCode="0301" disassyCode="00" disassyCodeVariant="A" infoCode="022" infoCodeVariant="A" itemLocationCode="D"';
   return 'modelIdentCode="'+p[0]+'" systemDiffCode="'+p[1]+'" systemCode="'+p[2]+'" subSystemCode="'+p[3].charAt(0)+'" subSubSystemCode="'+(p[3].charAt(1)||'0')+'" assyCode="'+p[4]+'" disassyCode="'+p[5].slice(0,2)+'" disassyCodeVariant="'+p[5].slice(2)+'" infoCode="'+p[6].slice(0,3)+'" infoCodeVariant="'+p[6].slice(3)+'" itemLocationCode="'+p[7]+'"';
 }
-const HEADER = '<?xml version="1.0" encoding="UTF-8"?>\n<dmodule xmlns:xlink="http://www.w3.org/1999/xlink">\n';
+// D-014: FORSDOC'un "Katmana veri aktarılırken bir hata oluştu" (S1000D.Error:00183) hatasının
+// kök nedeni: kullanıcının FORSDOC'a DAHA ÖNCE BAŞARIYLA yüklediği gerçek dosyalarla karşılaştırıldığında,
+// o dosyaların <dmodule> kök elemanında HER ZAMAN xmlns:xsi + xsi:noNamespaceSchemaLocation (şemaya özel
+// XSD adresi: descript.xsd/proced.xsd/fault.xsd/ipd.xsd) bulunduğu görüldü. Bizim ürettiğimiz dosyalarda
+// bu öznitelik HİÇ yoktu. FORSDOC muhtemelen veri modülünü hangi şema/katmana ait olduğunu bu değerden
+// belirliyor; değer yoksa katmana yerleştiremiyor. Ayrıca başarılı dosyalarda her zaman (boş da olsa) bir
+// DOCTYPE satırı var — bu da eklendi.
+function dmHeader(schema){
+  const xsdMap = {descript:'descript.xsd', proced:'proced.xsd', fault:'fault.xsd', ipd:'ipd.xsd'};
+  const xsd = xsdMap[schema] || 'descript.xsd';
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE dmodule []>\n<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_5-0/xml_schema_flat/'+xsd+'">\n';
+}
 const FOOTER = '\n</dmodule>';
 
 // ---------- ICN / Teknik Görsel entegrasyonu ----------
@@ -962,8 +1021,10 @@ function generateXmlWithIcn(row){
   const icn = getIcnForRow(row.dmc);
   if (icn){
     xml = injectIcnIntoXml(xml, row.schema, icn);
-    // DOCTYPE'ı XML bildiriminden hemen sonra ekle
-    xml = xml.replace('?>\n', '?>\n' + icnDoctype(icn.code));
+    // dmHeader() zaten boş bir <!DOCTYPE dmodule []> satırı üretiyor; ENTITY tanımlarını eklemek için
+    // İKİNCİ bir DOCTYPE eklemek yerine mevcut boş DOCTYPE'ı ENTITY içerenle DEĞİŞTİRİYORUZ
+    // (bir XML belgesinde yalnızca tek bir DOCTYPE bildirimi olabilir).
+    xml = xml.replace('<!DOCTYPE dmodule []>\n', icnDoctype(icn.code));
   }
   return xml;
 }
@@ -977,7 +1038,7 @@ function genDescript(row){
     '      </levelledPara>\n' +
     '    </description>\n' +
     '  </content>';
-  return HEADER + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
+  return dmHeader('descript') + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
 }
 function genProced(row){
   const content = '  <content>\n' +
@@ -999,7 +1060,7 @@ function genProced(row){
     '      </closeRqmts>\n' +
     '    </procedure>\n' +
     '  </content>';
-  return HEADER + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
+  return dmHeader('proced') + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
 }
 function genFault(row){
   let content;
@@ -1101,7 +1162,7 @@ function genFault(row){
       '    </faultIsolation>\n' +
       '  </content>';
   }
-  return HEADER + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
+  return dmHeader('fault') + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
 }
 function genIpd(row){
   const content = '  <content>\n' +
@@ -1119,7 +1180,7 @@ function genIpd(row){
     '      </catalogSeqNumber>\n' +
     '    </illustratedPartsCatalog>\n' +
     '  </content>';
-  return HEADER + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
+  return dmHeader('ipd') + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
 }
 function generateXml(row){
   switch(row.schema){

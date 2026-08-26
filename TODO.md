@@ -15,43 +15,77 @@ kontrol edilmeli.
   doğrulanmadı** — bu nedenle kapatılamaz.
 - Detay: `DECISIONS.md` D-005.
 
-## T-011 — [YENİ — BEKLEMEDE / XSD İLE DOĞRULANACAK ⏳] infoCode kritik hatası düzeltmesi
-- **Kaynak:** Gerçek FORSDOC importunda kullanıcı tarafından tespit edildi
-  (üretilen gerçek ZIP paketinde `infoCode="40"` gibi 2 haneli hatalı
-  değer bulundu; doğrusu `infoCode="040"`).
-- Detay-sütun import yolunda, tam DMC mevcutken infoCode artık her zaman
-  `parseDmcString(dmc)`'den geliyor; Excel'deki ayrı infoCode sütunu
-  yalnızca uyuşmazlık uyarısı için okunuyor, XML üretiminde kullanılmıyor.
-- 11 test (TEST-INFO-01→07 + TEST-IMF-01) PASS.
-- **Neden hâlâ açık:** TEST-INFO-07 yalnızca `^[A-Z0-9]{3}$` regex deseniyle
-  kontrol edildi; gerçek `descript.xsd` ile `xmllint --schema`
-  çalıştırılmadı (XSD paketi bu oturumda sağlanmadı). Resmi XSD paketi
-  sağlandığında, bu düzeltmeyle üretilen 040/420/520/941 örnek XML'leri
-  yeniden `xmllint --schema` ile test edilmeli.
-- Detay: `DECISIONS.md` D-009.
+## T-011 — [BEKLEMEDE / XSD İLE DOĞRULANACAK ⏳] infoCode kritik hatası düzeltmesi
+- Detay: `DECISIONS.md` D-009. Bu oturumda regresyon testleriyle yeniden
+  doğrulandı, kod değişmedi.
 
-## T-012 — [YENİ — BAĞIMSIZ TEYİT BEKLİYOR] icnmetadata.xsd dosya adı düzeltmesi
-- `buildImfXml()` içindeki `xsi:noNamespaceSchemaLocation` değeri
-  `icnMetadata.xsd` → `icnmetadata.xsd` (küçük harf) olarak değiştirildi.
-- **Bu değişiklik yalnızca kullanıcı beyanına dayanıyor** — Claude bu
-  oturumda resmi S1000D XSD paketine erişemediğinden dosya adının gerçekten
-  küçük harfli olduğunu bağımsız olarak doğrulayamadı.
-- Resmi paket sağlandığında, ZIP içindeki gerçek dosya adı listelenerek bu
-  nokta teyit edilmeli.
-- Detay: `DECISIONS.md` D-010.
+## T-012 — [BAĞIMSIZ TEYİT BEKLİYOR] icnmetadata.xsd dosya adı düzeltmesi
+- Detay: `DECISIONS.md` D-010. Bu oturumda değişmedi.
+
+## T-013 — [YENİ — BEKLEMEDE / XSD İLE DOĞRULANACAK ⏳] bilesen/sokum/altAltSis/mic/sdc/kkk kritik hatası düzeltmesi (7906 satır yanlış reddi)
+- **Kaynak:** Gerçek FORSDOC CSV importunda 7906 satırın tamamı, proje
+  uzunluk kuralı (`dmcLengthError`) nedeniyle yanlışlıkla reddedildi.
+- **Kök neden:** Detay-sütun import yolunda `bilesen`/`sokum`/`altAltSis`/
+  `mic`/`sdc`/`kkk` alanları, D-009'daki infoCode hatasıyla birebir aynı
+  desende (`get('x') || p.x`), Excel'in sayısal biçimlendirme nedeniyle
+  kırpılmış (ör. `"0000"` → `"0"`) ama boş olmayan sütun değerleriyle
+  DMC'den doğru türetilen değerin önüne geçiyordu.
+- **Düzeltme:** Tam DMC geçerliyken bu alanlar artık her zaman
+  `parseDmcString(dmc)`'den geliyor; Excel'in ilgili sütunu yalnızca
+  uyuşmazlık uyarısı (`dmcFieldMismatchCount`/`dmcFieldMismatchSamples`)
+  için okunuyor, satır asla bu yüzden atlanmıyor, XML üretimini asla
+  etkilemiyor.
+- **Test sonuçları:** 54/54 dahili test PASS + 7906 satırlık gerçekçi
+  ölçek testinde düzeltme öncesi 0/7906 → düzeltme sonrası 7906/7906
+  kabul edildiği doğrulandı.
+- **Neden hâlâ açık:** Resmi S1000D Issue 5.0 XSD paketiyle `xmllint
+  --schema` çapraz doğrulaması bu oturumda da yapılamadı (paket
+  sağlanmadı). Resmi paket sağlandığında, bu değişiklikle üretilen örnek
+  XML'ler (özellikle `ipd`/941 şeması, çünkü `assyCode`/`subSystemCode`/
+  `subSubSystemCode` doğrudan `row.bilesen`/`row.altAltSis`'ten geliyor)
+  yeniden test edilmeli.
+- Detay: `DECISIONS.md` D-011.
+
+## T-014 — [YENİ — KULLANICI FORSDOC'TA YENİDEN TEST ETMELİ] xsi:noNamespaceSchemaLocation eksikti (D-014); systemCode düzeltmesi (D-012) yanlış çıktı ve geri alındı
+- **1. deneme:** Kullanıcının uygulamayla ürettiği bir ZIP FORSDOC'a
+  aktarılamadı: `{"code":"S1000D.Error:00183","message":"Katmana veri
+  aktarılırken bir hata oluştu.","validationErrors":null}`. Şüpheyle
+  `systemCode="GA1"` (3 karakter) 2 karaktere zorlandı (D-012) ve IMF'deki
+  yinelenen `icnObjectIdent` düzeltildi (D-013).
+- **2. deneme:** Kullanıcı D-012+D-013 içeren yeni bir ZIP ile tekrar
+  denedi — **AYNI hata** tekrar alındı. Bu, D-012'nin yanlış bir teşhis
+  olduğunu gösterdi.
+- **Karşılaştırma:** Kullanıcıdan FORSDOC'a **daha önce BAŞARIYLA
+  yüklediği** 11 dosyalık gerçek bir ZIP istendi. Doğrudan karşılaştırma
+  şunu ortaya çıkardı:
+  - `systemCode="GA1"` (3 karakter) FORSDOC tarafından **kabul ediliyordu**
+    → D-012 **YANLIŞTI, geri alındı.**
+  - Başarılı dosyaların `<dmodule>` kök elemanında HER ZAMAN `xmlns:xsi` +
+    `xsi:noNamespaceSchemaLocation` (şemaya özel XSD adresi) vardı; bizim
+    üretimimizde bu **hiç yoktu** → **D-014, muhtemel asıl kök neden.**
+- **Düzeltme (D-014):** `dmHeader(schema)` fonksiyonu eklendi; artık
+  `descript`/`proced`/`fault`/`ipd` şemalarının her biri için doğru
+  `xsi:noNamespaceSchemaLocation` üretiliyor. ICN entity/DOCTYPE
+  enjeksiyonu da (çift DOCTYPE oluşmaması için) buna göre güncellendi.
+- **Test sonuçları:** 35/35 yeni test PASS (bkz. `DECISIONS.md` D-014).
+- **Neden hâlâ açık:** Kullanıcının FORSDOC'a **üçüncü kez** güncellenmiş
+  HTML ile yeni bir ZIP üretip import etmesi ve sonucu bildirmesi
+  gerekiyor. Başarılı referans dosyalarında bulunan ama bizim üretimimizde
+  hâlâ olmayan bazı ek elemanlar var (`exportControl`, `restrictionInfo/
+  copyright`, `systemBreakdownCode`, `skillLevel`, `reasonForUpdate`) —
+  bunların FORSDOC için zorunlu olup olmadığı DOĞRULANAMADI. Eğer D-014
+  sonrası hata devam ederse, sıradaki şüpheli bunlar olmalı.
 
 ## T-002 — Eksik şema türlerini önceliklendir ve ekle
 - Öncelik: `schedul` (bakım planlama/PMCS), sonra `wrngdata`. (Değişmedi.)
 
 ## T-003 — XSD/BREX doğrulama katmanı ekle
-- XSD tarafı: baseline tamamlandı. **Ancak bu baseline T-007 ve T-011'i
-  kapsamıyor** — ikisi de baseline'dan sonra eklendi/düzeltildi ve henüz
-  XSD ile çapraz doğrulanmadı.
+- XSD tarafı: baseline tamamlandı. **Ancak bu baseline T-007, T-011 ve
+  T-013'ü kapsamıyor** — üçü de baseline'dan sonra eklendi/düzeltildi ve
+  henüz XSD ile çapraz doğrulanmadı.
 - BREX tarafı: **çalışma tamamen durduruldu** (bkz. `DECISIONS.md` D-006).
-  S1000D Default BREX araştırması, BREX validator geliştirme ve BREX
-  referans değişiklikleri artık geliştirme önceliği değildir. BREX konusu
-  "MSB / proje girdisi gelene kadar BEKLEMEDE" olarak tutulmalı. Bu maddeye
-  bir sonraki oturumda **kullanıcı açıkça talimat vermeden** dönülmemeli.
+  Bu oturumda da BREX konusuna dönülmedi. Bu maddeye bir sonraki oturumda
+  **kullanıcı açıkça talimat vermeden** dönülmemeli.
 
 ## T-004 — ICN gömme yöntemini S1000D 5.0 ile karşılaştır [KAPATILDI ✅ — yalnızca XSD/XML geçerliliği açısından]
 - Detay: `DECISIONS.md` (önceki oturum notu, `graphic/@infoEntityIdent` = `xs:ENTITY`).
@@ -68,14 +102,14 @@ kontrol edilmeli.
 ## T-010 — ICN Metodu "İkisi Birden" ve SNS Dili doğrulaması — DOĞRULANAMADI
 - (Değişmedi.)
 
-## Uçtan Uca Test Sonucu (bu oturumda tamamlandı, referans amaçlı)
-DERMAN proje girdileriyle (M0117/AAA/TH743/tr-TR) 10 uçtan uca test
-çalıştırıldı: DMC import, 4 şema türü üretimi, IMF üretimi, VM-ICN ilişki
-yapıları (figure/graphic/ENTITY-NDATA), ZIP paketleme (Python `zipfile` ile
-bağımsız açma testi dahil), regresyon — hepsi PASS. ICN'in yalnızca
-görsel-yükleme/canvas/OCR kısmı headless test ortamında çalıştırılamadı
-(KISMİ). Bu test sırasında gerçek FORSDOC importunda D-009'daki infoCode
-hatası kullanıcı tarafından bulundu ve bu oturumda düzeltildi.
+## Bu Oturumda Yapılan Test Çalışması (referans amaçlı)
+Gerçek HTML dosyasından programatik olarak çıkarılan (`importText()`
+döngüsü, `parseDmcString`, `dmcLengthError`, `generateXml`,
+`identAndStatus`, `genIpd` vb.) kod parçalarıyla Node.js üzerinde 54
+birim/regresyon testi ve 7906 satırlık gerçekçi bir ölçek testi
+çalıştırıldı — tümü PASS. Tarayıcı DOM'una bağımlı kısımlar (canvas,
+Tesseract OCR, dosya yükleme UI'ı) bu oturumda test edilmedi (bkz.
+`PROJECT_STATUS.md`).
 
 ## Kapsam Dışı / Şimdilik Ertelenen
 - ZWSP şüphesi — bkz. `DECISIONS.md` D-002, açık risk değil.
