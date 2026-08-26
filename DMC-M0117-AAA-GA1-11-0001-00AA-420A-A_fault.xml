@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dmodule xmlns:xlink="http://www.w3.org/1999/xlink">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="M0117" systemDiffCode="AAA" systemCode="GA1" subSystemCode="1" subSubSystemCode="1" assyCode="0001" disassyCode="00" disassyCodeVariant="AA" infoCode="420" infoCodeVariant="A" itemLocationCode="A" />
+        <language languageIsoCode="tr" countryIsoCode="TR" />
+        <issueInfo issueNumber="001" inWork="00" />
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2026" month="08" day="21" />
+        <dmTitle>
+          <techName>Sogutucu Filtre</techName>
+          <infoName>General fault isolation procedure</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="new">
+      <security securityClassification="01" />
+      <dataRestrictions>
+        <restrictionInstructions>
+          <dataDistribution>Zirhsiz Kurtarici Arac projesi kapsaminda yetkili kullanicilara acik.</dataDistribution>
+          <dataHandling>Bu veri modulu icin ozel bir elleçleme talimati yoktur.</dataHandling>
+          <dataDestruction>Kullanicilar bu veri modulunu kendi yerel prosedurlerine gore imha edebilir.</dataDestruction>
+          <dataDisclosure>Bu veri modulune uygulanan bir yayma sinirlamasi yoktur.</dataDisclosure>
+        </restrictionInstructions>
+      </dataRestrictions>
+      <responsiblePartnerCompany enterpriseCode="TH743">
+        <enterpriseName>MPG MAKINE PRODUKSIYON GRUBU MAKINE IMALAT SANAYI VE TICARET ANONIM SIRKETI</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="TH743">
+        <enterpriseName>MPG MAKINE PRODUKSIYON GRUBU MAKINE IMALAT SANAYI VE TICARET ANONIM SIRKETI</enterpriseName>
+      </originator>
+      <applic>
+        <displayText>
+          <simplePara>Tum konfigurasyonlar icin gecerlidir</simplePara>
+        </displayText>
+      </applic>
+      <brexDmRef>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="S1000D" systemDiffCode="A" systemCode="04"
+                    subSystemCode="1" subSubSystemCode="0" assyCode="0301"
+                    disassyCode="00" disassyCodeVariant="A"
+                    infoCode="022" infoCodeVariant="A" itemLocationCode="D" />
+          </dmRefIdent>
+        </dmRef>
+      </brexDmRef>
+      <qualityAssurance>
+        <unverified />
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <faultIsolation>
+      <preliminaryRqmts>
+        <reqCondGroup>
+          <noConds />
+        </reqCondGroup>
+        <reqSupportEquips>
+          <noSupportEquips />
+        </reqSupportEquips>
+        <reqSupplies>
+          <noSupplies />
+        </reqSupplies>
+        <reqSpares>
+          <noSpares />
+        </reqSpares>
+        <reqSafety>
+          <noSafety />
+        </reqSafety>
+      </preliminaryRqmts>
+      <faultIsolationProcedure id="fip0001">
+        <isolationProcedure>
+          <preliminaryRqmts>
+            <reqCondGroup>
+              <noConds />
+            </reqCondGroup>
+            <reqSupportEquips>
+              <noSupportEquips />
+            </reqSupportEquips>
+            <reqSupplies>
+              <noSupplies />
+            </reqSupplies>
+            <reqSpares>
+              <noSpares />
+            </reqSpares>
+            <reqSafety>
+              <noSafety />
+            </reqSafety>
+          </preliminaryRqmts>
+          <isolationMainProcedure>
+            <isolationStep id="is0001">
+              <title>1 Basinc farkini olcun</title>
+            </isolationStep>
+            <isolationProcedureEnd id="ipe0001">
+              <title>Sonuc</title>
+              <action>Basinc farki limit degerin uzerindeyse sogutucu filtreyi degistirin.</action>
+            </isolationProcedureEnd>
+          </isolationMainProcedure>
+          <closeRqmts>
+            <reqCondGroup>
+              <noConds />
+            </reqCondGroup>
+          </closeRqmts>
+        </isolationProcedure>
+      </faultIsolationProcedure>
+    </faultIsolation>
+  </content>
+</dmodule>

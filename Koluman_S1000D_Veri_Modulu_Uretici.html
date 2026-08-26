@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Koluman S1000D Veri Modülü Üretici</title>
+<style>
+  :root{
+    --navy:#1F1B4D; --teal:#0E7C7B; --light:#EAF3F3; --grey:#595959; --line:#E2E5EA;
+    --catA:#E2EFDA; --catB:#DDEBF7; --catC:#FFF2CC; --catD:#FCE4E4; --bg:#F6F7FA;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#222;}
+  .topbar{display:flex;align-items:center;gap:14px;background:var(--navy);color:#fff;padding:10px 18px;}
+  .logo-chip{background:#fff;border-radius:8px;padding:4px 10px;display:flex;align-items:center;}
+  .logo-chip img{height:26px;display:block;}
+  .topbar h1{font-size:16px;margin:0;font-weight:700;}
+  .topbar .sub{font-size:12px;opacity:.8;}
+  .topbar .proj-input{margin-left:auto;display:flex;align-items:center;gap:8px;}
+  .topbar input[type=text]{border:none;border-radius:6px;padding:6px 10px;font-size:13px;width:220px;}
+  .btn{border:none;border-radius:6px;padding:7px 14px;font-size:13px;cursor:pointer;font-weight:600;}
+  .btn-teal{background:var(--teal);color:#fff;}
+  .btn-outline{background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;}
+  .btn-ghost{background:#fff;border:1px solid var(--line);color:#333;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .layout{display:grid;grid-template-columns:340px 1fr;gap:14px;padding:14px;align-items:start;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;}
+  .card h2{font-size:12px;letter-spacing:.03em;color:var(--navy);text-transform:uppercase;margin:0 0 10px;font-weight:800;}
+  .hint{font-size:11.5px;color:var(--grey);line-height:1.5;margin-bottom:8px;}
+  .hint b{color:#333;}
+  textarea{width:100%;min-height:90px;border:1px solid var(--line);border-radius:8px;padding:8px;font-family:monospace;font-size:11.5px;resize:vertical;}
+  .drop{border:2px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;gap:8px;
+        padding:14px;cursor:pointer;font-size:12.5px;color:var(--grey);margin-top:8px;}
+  .drop:hover{border-color:var(--teal);color:var(--teal);}
+  .row-gap{display:flex;gap:8px;margin-top:8px;}
+  .status-box{margin-top:10px;border-radius:8px;padding:8px 10px;font-size:12px;display:none;}
+  .status-ok{background:#E2EFDA;color:#1B5E20;display:block;}
+  .status-warn{background:#FFF2CC;color:#7A5B00;display:block;}
+  .status-err{background:#FCE4E4;color:#8A1C1C;display:block;}
+  .tree{max-height:420px;overflow:auto;font-size:12.5px;}
+  .tree ul{list-style:none;margin:0;padding-left:14px;}
+  .tree > ul{padding-left:0;}
+  .tree li{margin:1px 0;}
+  .tnode{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;}
+  .tnode:hover{background:var(--light);}
+  .tnode.active{background:var(--teal);color:#fff;}
+  .tnode .arrow{width:12px;flex:0 0 auto;display:inline-block;font-size:10px;color:var(--grey);}
+  .tnode.active .arrow{color:#fff;}
+  .tnode .title{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tnode .code-badge{flex:0 0 auto;font-family:monospace;font-size:9.5px;color:#8a8f98;background:#EEF0F3;border-radius:4px;padding:0 5px;}
+  .tnode.active .code-badge{background:rgba(255,255,255,.25);color:#fff;}
+  .tnode .cnt{margin-left:auto;flex:0 0 auto;font-size:10.5px;background:var(--line);border-radius:10px;padding:0 6px;color:#444;}
+  .tnode.active .cnt{background:rgba(255,255,255,.3);color:#fff;}
+  .children{display:none;}
+  .children.open{display:block;}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+  .toolbar input[type=text]{flex:1;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;}
+  .toolbar select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;background:#fff;}
+  .breadcrumb{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--navy);margin-bottom:8px;flex-wrap:wrap;}
+  .breadcrumb .chip{background:var(--light);border-radius:6px;padding:3px 9px;font-weight:700;}
+  .breadcrumb a{color:var(--teal);text-decoration:none;font-weight:700;cursor:pointer;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  thead th{background:var(--navy);color:#fff;text-align:left;padding:7px 8px;position:sticky;top:0;font-size:11px;}
+  tbody td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tbody tr:hover{background:#FAFBFC;}
+  .tbl-wrap{max-height:56vh;overflow:auto;border:1px solid var(--line);border-radius:8px;}
+  .badge{display:inline-block;border-radius:5px;padding:1px 7px;font-size:10.5px;font-weight:700;}
+  .badge-descript{background:#DDEBF7;color:#12507A;}
+  .badge-proced{background:#E2EFDA;color:#245C24;}
+  .badge-fault{background:#FCE4E4;color:#8A1C1C;}
+  .badge-ipd{background:#F3E5F5;color:#6A1B9A;}
+  .badge-none{background:#EEE;color:#777;}
+  .dmc-mono{font-family:monospace;font-size:11.5px;}
+  .link-btn{background:none;border:none;color:var(--teal);cursor:pointer;font-size:11.5px;font-weight:700;padding:0;}
+  .bottombar{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;}
+  .bottombar .count{font-size:12.5px;color:var(--grey);margin-right:auto;}
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:50;}
+  .modal-bg.open{display:flex;}
+  .modal{background:#fff;border-radius:10px;padding:20px;width:460px;max-width:92vw;max-height:85vh;overflow:auto;}
+  .modal h3{margin-top:0;color:var(--navy);}
+  .field{margin-bottom:10px;}
+  .field label{display:block;font-size:12px;font-weight:700;color:#333;margin-bottom:3px;}
+  .field input,.field select{width:100%;border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:13px;}
+  .drawer-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:60;}
+  .drawer-bg.open{display:block;}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:560px;max-width:94vw;background:#fff;box-shadow:-4px 0 20px rgba(0,0,0,.2);
+          transform:translateX(100%);transition:transform .2s;z-index:61;display:flex;flex-direction:column;}
+  .drawer.open{transform:translateX(0);}
+  .drawer-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;}
+  .drawer-head b{color:var(--navy);}
+  .drawer-close{margin-left:auto;background:none;border:none;font-size:18px;cursor:pointer;color:var(--grey);}
+  .drawer pre{flex:1;margin:0;padding:14px 16px;overflow:auto;font-size:11px;background:#0d1117;color:#d6e2ff;white-space:pre-wrap;word-break:break-word;}
+  .drawer-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;}
+  .empty{padding:30px;text-align:center;color:var(--grey);font-size:13px;}
+  .footer-note{font-size:11px;color:var(--grey);text-align:center;padding:16px;}
+  input[type=checkbox]{width:15px;height:15px;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-chip"><img id="logo-img" alt="Koluman"></div>
+  <div>
+    <h1 id="app-title">Koluman S1000D Veri Modülü Üretici</h1>
+    <div class="sub" id="app-sub">Proje: —</div>
+  </div>
+  <div class="proj-input">
+    <button class="btn btn-outline" id="btn-settings">⚙ Proje Ayarları</button>
+  </div>
+</div>
+
+<div class="layout">
+  <div>
+    <div class="card">
+      <h2>1 · Veri İçe Aktar</h2>
+      <div class="hint">
+        <b>Önerilen yöntem:</b> Excel'de <b>"DMC Detay (Tum InfoCode)"</b> sayfasını açın, başlık satırı dahil
+        <b>tüm sütunları</b> seçip kopyalayın (Ctrl+C), aşağıya yapıştırın (Ctrl+V).<br>
+        <b>Alternatif:</b> Sadece <b>"Tam Veri Modülü Kodu (DMC)"</b> sütununu kopyalayıp yapıştırabilirsiniz —
+        uygulama diğer tüm bilgileri (şema türü, infoCode vb.) DMC kodunun kendisinden türetir.
+      </div>
+      <textarea id="paste-area" placeholder="Buraya Excel'den kopyaladığınız satırları yapıştırın..."></textarea>
+      <label class="drop" id="drop-zone">
+        📄 <span>...veya CSV dosyası seçmek için tıklayın</span>
+        <input type="file" id="file-input" accept=".csv,.txt,.tsv" style="display:none">
+      </label>
+      <div class="row-gap">
+        <button class="btn btn-teal" id="btn-import" style="flex:1">İçe Aktar</button>
+        <button class="btn btn-ghost" id="btn-clear-import">Temizle</button>
+      </div>
+      <div class="status-box" id="import-status"></div>
+    </div>
+
+    <div class="card">
+      <h2>2 · SNS Ağacı</h2>
+      <div class="hint">Bir düğüme tıklayın — sadece <b>o düğümün</b> ürettiği veri modülleri sağda listelenir.</div>
+      <div class="tree" id="tree-root"><div class="empty">Önce veri içe aktarın.</div></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>3 · Satırları Seç, XML Üret</h2>
+      <div class="breadcrumb" id="breadcrumb" style="display:none;"></div>
+      <div class="toolbar">
+        <input type="text" id="search-box" placeholder="SNS kodu, başlık ya da DMC ara...">
+        <select id="filter-schema"><option value="">Tüm şema türleri</option></select>
+        <select id="filter-support">
+          <option value="">Destek durumu: hepsi</option>
+          <option value="yes">Sadece üretilebilir</option>
+          <option value="no">Sadece şablonsuz</option>
+        </select>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:30px;"><input type="checkbox" id="check-all"></th>
+              <th>SNS Kodu</th><th>Başlık</th><th>Şema</th><th>infoCode</th><th style="width:30px;">🖼</th><th>Tam DMC</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="rows-tbody">
+            <tr><td colspan="8" class="empty">Önce veri içe aktarın.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bottombar">
+        <div class="count" id="row-count">0 satır</div>
+        <button class="btn btn-ghost" id="btn-select-visible">Görünenleri Seç</button>
+        <button class="btn btn-ghost" id="btn-select-none">Seçimi Temizle</button>
+        <button class="btn btn-teal" id="btn-goto-step2" disabled>Devam Et → Sonraki Adım</button>
+      </div>
+    </div>
+    <div class="footer-note">Koluman Otomotiv Endüstri A.Ş. — Askeri Projeler Müdürlüğü / ELD Birimi · Tamamen offline çalışır, veri tarayıcınızın dışına çıkmaz.</div>
+  </div>
+</div>
+
+<div style="padding:0 14px 14px;">
+  <!-- ADIM 4: VM oluşturulduktan sonra sorulacak karar noktası -->
+  <div class="card" id="step2-card">
+    <h2>4 · Sonraki Adım</h2>
+    <div class="empty" id="step2-empty">Önce 3. adımda en az bir satır seçip "Devam Et"e tıklayın.</div>
+
+    <div id="step2-body" style="display:none;">
+      <div class="hint"><b><span id="step2-count">0</span> VM</b> seçildi. Şimdi ne yapmak istersiniz?</div>
+      <div id="step2-selected-list" style="max-height:110px;overflow:auto;font-size:11.5px;color:var(--grey);margin:6px 0 14px;border:1px solid var(--line);border-radius:6px;padding:6px;"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div style="border:1px solid var(--line);border-radius:10px;padding:14px;">
+          <h3 style="margin:0 0 6px;font-size:14px;color:var(--navy);">⚡ Sadece VM Oluştur (Otomatik)</h3>
+          <p style="font-size:12px;color:var(--grey);min-height:52px;">Seçilen VM'lerin XML dosyalarını doğrudan ZIP olarak indirir. Teknik görsel eklenmez.</p>
+          <button class="btn btn-teal" id="btn-choice-auto" style="width:100%;">VM'leri İndir (ZIP)</button>
+        </div>
+        <div style="border:1px solid var(--teal);border-radius:10px;padding:14px;background:var(--light);">
+          <h3 style="margin:0 0 6px;font-size:14px;color:var(--navy);">🖼️ Etkin Noktalı Teknik Görsel Ekle</h3>
+          <p style="font-size:12px;color:var(--grey);min-height:52px;">Callout'lu görsel + parça listesi CSV yükleyin, Tesseract OCR ile hotspot konumlarını otomatik bulun, seçili VM'e/VM'lere bağlayın.</p>
+          <button class="btn btn-ghost" id="btn-choice-icn" style="width:100%;border-color:var(--teal);color:var(--teal);">Teknik Görsel Ekle →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADIM 5: ICN Builder (sadece "Etkin Noktalı Görsel Ekle" seçilince görünür) -->
+  <div class="card" id="icn-builder-card" style="display:none;">
+    <h2>5 · Teknik Görsel (ICN) Oluştur</h2>
+    <button class="link-btn" id="icn-back-btn" style="margin-bottom:10px;">← Sonraki Adım'a Dön</button>
+    <div class="hint">
+      Callout'lu bir teknik görsel (PNG/JPG) yükleyin, parça listesini (Daimler WIS veya NMCRL CSV —
+      <b>Konum</b>/<b>Reference Number</b>, <b>Parça Adı</b>/<b>Item Name</b> gibi sütunlar otomatik tanınır)
+      içe aktarın, <b>"Tesseract OCR ile Numaraları Bul"</b> ile callout konumlarını otomatik bulun (eksik
+      kalanları tablodan seçip görsele tıklayarak elle tamamlayabilirsiniz). Sonra aşağıdan hedef VM'leri
+      seçip bağlayın.
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <label class="drop" id="icn-drop">
+          🖼️ <span>Teknik görsel seç (PNG/JPG)</span>
+          <input type="file" id="icn-image-input" accept="image/png,image/jpeg" style="display:none">
+        </label>
+        <textarea id="icn-parts-paste" placeholder="Parça listesini buraya yapıştırın (Konum;Parça Numarası;Parça Adı;Parça Açıklaması;Önerilen miktar...) veya CSV dosyası seçin" style="min-height:60px;margin-top:8px;"></textarea>
+        <div class="row-gap">
+          <button class="btn btn-ghost" id="icn-parts-import" style="flex:1">Yapıştırılanı İçe Aktar</button>
+          <label class="drop" id="icn-csv-drop" style="flex:1;margin-top:0;">
+            📄 <span>CSV dosyası seç</span>
+            <input type="file" id="icn-csv-input" accept=".csv,.txt,.tsv" style="display:none">
+          </label>
+        </div>
+        <div class="status-box" id="icn-parts-status"></div>
+
+        <div class="row-gap" style="margin-top:10px;">
+          <button class="btn btn-teal" id="icn-ocr-btn" style="flex:1" disabled>🔎 Tesseract OCR ile Numaraları Bul</button>
+        </div>
+        <div class="hint" style="margin-top:4px;">İlk kullanımda OCR motoru internetten yüklenir (~2-5 MB, bir kereliğine). Sonra aynı oturumda tekrar internete gerek kalmaz. İnternet yoksa: tablodan satır seçip görsele elle tıklayarak da konumlandırabilirsiniz.</div>
+        <div class="status-box" id="icn-ocr-status"></div>
+
+        <div class="field" style="margin-top:10px;">
+          <label>ICN Kodu</label><input type="text" id="icn-code-field">
+        </div>
+        <div class="field">
+          <label>Başlık</label><input type="text" id="icn-title-field" placeholder="Örn. Motor Bloğu Kapak ve Conta Seti">
+        </div>
+        <div class="field">
+          <label>Hangi VM'e/VM'lere bağlanacak? (aynı görsel birden fazla VM'e bağlanabilir)</label>
+          <div id="icn-target-checklist" style="max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px;"></div>
+        </div>
+        <div class="status-box" id="icn-link-status"></div>
+
+        <div class="row-gap">
+          <button class="btn btn-ghost" id="icn-save-btn" style="flex:1">Kaydet ve Seçili VM'lere Bağla</button>
+          <button class="btn btn-teal" id="icn-zip-btn" style="flex:1" disabled>Tümünü İndir (VM+ICN+IMF ZIP)</button>
+        </div>
+        <div class="hint" style="margin-top:8px;">Kütüphanedeki ICN sayısı: <span id="icn-library-count">0</span></div>
+      </div>
+
+      <div>
+        <div class="hint">OCR sonrası eksik kalan satır varsa: tablodan seçin, sonra görsel üzerinde o parçanın konumuna tıklayın.</div>
+        <div id="icn-canvas-wrap" style="display:none;max-width:100%;overflow:auto;border:1px solid var(--line);border-radius:8px;">
+          <canvas id="icn-canvas" style="max-width:100%;display:block;cursor:crosshair;"></canvas>
+        </div>
+        <div class="tbl-wrap" id="icn-hotspot-wrap" style="display:none;margin-top:10px;max-height:260px;">
+          <table>
+            <thead><tr><th>Konum</th><th>Parça No</th><th>Parça Adı</th><th>X</th><th>Y</th></tr></thead>
+            <tbody id="icn-hotspot-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="settings-modal">
+  <div class="modal">
+    <h3>Proje Ayarları</h3>
+    <div class="field"><label>Proje Adı</label><input type="text" id="s-projname" value="Zırhsız Kurtarıcı Araç"></div>
+    <div class="field"><label>Model Tanımlama Kodu (MIC)</label><input type="text" id="s-mic" value="M0117"></div>
+    <div class="field"><label>Sistem Ayrım Kodu</label><input type="text" id="s-sdc" value="AAA"></div>
+    <div class="field"><label>CAGE Kodu</label><input type="text" id="s-cage" value="TH743"></div>
+    <div class="field"><label>Kuruluş Adı</label><input type="text" id="s-org" value="MPG MAKINE PRODUKSIYON GRUBU MAKINE IMALAT SANAYI VE TICARET ANONIM SIRKETI"></div>
+    <div class="field"><label>Dil Kodu</label><input type="text" id="s-lang" value="tr"></div>
+    <div class="field"><label>Ülke Kodu</label><input type="text" id="s-country" value="TR"></div>
+    <div class="field"><label>Issue Numarası</label><input type="text" id="s-issue" value="001"></div>
+    <div class="field"><label>BREX DMC Referansı</label><input type="text" id="s-brex" value="S1000D-A-04-10-0301-00A-022A-D"></div>
+    <div class="row-gap">
+      <button class="btn btn-ghost" id="s-cancel" style="flex:1">Kapat</button>
+      <button class="btn btn-teal" id="s-save" style="flex:1">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div class="drawer-bg" id="drawer-bg"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head"><b id="drawer-title">XML Önizleme</b><button class="drawer-close" id="drawer-close">✕</button></div>
+  <pre id="drawer-content"></pre>
+  <div class="drawer-foot">
+    <button class="btn btn-teal" id="drawer-download" style="flex:1">Bu Dosyayı İndir</button>
+  </div>
+</div>
+
+<script>
+const INFO_SCHEMA = {
+  '040':'descript','042':'descript','0B0':'schedul',
+  '410':'fault','420':'fault',
+  '200':'proced','300':'proced','341':'proced','250':'proced','520':'proced','710':'proced','720':'proced',
+  '941':'ipd','051':'wrngdata'
+};
+const INFO_NAMES = {
+  '040':'Description','042':'Description of function','0B0':'Maintenance planning information',
+  '410':'General fault description','420':'General fault isolation procedure',
+  '200':'Servicing','300':'Examinations, tests and checks','341':'Manual test',
+  '250':'Clean and apply surface protection','520':'Remove procedure','710':'Assemble procedure','720':'Install procedure',
+  '941':'Illustrated parts data','051':'Wiring diagram'
+};
+const SUPPORTED_SCHEMAS = ['descript','proced','fault','ipd'];
+
+const SETTINGS_KEY = 'koluman_s1000d_settings_v2';
+function loadSettings(){
+  try{ return Object.assign(defaultSettings(), JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')); }
+  catch(e){ return defaultSettings(); }
+}
+function defaultSettings(){
+  return {projname:'Zırhsız Kurtarıcı Araç', mic:'M0117', sdc:'AAA', cage:'TH743',
+    org:'MPG MAKINE PRODUKSIYON GRUBU MAKINE IMALAT SANAYI VE TICARET ANONIM SIRKETI',
+    lang:'tr', country:'TR', issue:'001', brex:'S1000D-A-04-10-0301-00A-022A-D'};
+}
+let SETTINGS = loadSettings();
+function applySettingsToUI(){
+  document.getElementById('s-projname').value = SETTINGS.projname;
+  document.getElementById('s-mic').value = SETTINGS.mic;
+  document.getElementById('s-sdc').value = SETTINGS.sdc;
+  document.getElementById('s-cage').value = SETTINGS.cage;
+  document.getElementById('s-org').value = SETTINGS.org;
+  document.getElementById('s-lang').value = SETTINGS.lang;
+  document.getElementById('s-country').value = SETTINGS.country;
+  document.getElementById('s-issue').value = SETTINGS.issue;
+  document.getElementById('s-brex').value = SETTINGS.brex;
+  document.getElementById('app-sub').textContent = 'Proje: ' + SETTINGS.projname;
+}
+applySettingsToUI();
+
+document.getElementById('btn-settings').onclick = () => document.getElementById('settings-modal').classList.add('open');
+document.getElementById('s-cancel').onclick = () => document.getElementById('settings-modal').classList.remove('open');
+document.getElementById('s-save').onclick = () => {
+  SETTINGS = {
+    projname: document.getElementById('s-projname').value.trim() || 'Proje',
+    mic: document.getElementById('s-mic').value.trim(),
+    sdc: document.getElementById('s-sdc').value.trim(),
+    cage: document.getElementById('s-cage').value.trim(),
+    org: document.getElementById('s-org').value.trim(),
+    lang: document.getElementById('s-lang').value.trim() || 'tr',
+    country: document.getElementById('s-country').value.trim() || 'TR',
+    issue: document.getElementById('s-issue').value.trim() || '001',
+    brex: document.getElementById('s-brex').value.trim(),
+  };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS));
+  applySettingsToUI();
+  document.getElementById('settings-modal').classList.remove('open');
+};
+
+function turkishFold(s){
+  return String(s||'').toLowerCase()
+    .replace(/ı/g,'i').replace(/i̇/g,'i')
+    .replace(/ş/g,'s').replace(/ğ/g,'g')
+    .replace(/ü/g,'u').replace(/ö/g,'o').replace(/ç/g,'c')
+    .replace(/\s+/g,' ').trim();
+}
+
+const HEADER_MAP = {};
+[
+  [['sns kodu'],'sns'],
+  [['baslik'],'title'],
+  [['seviye'],'seviye'],
+  [['kategori'],'kategori'],
+  [['infocode'],'infoCode'],
+  [['infocode tanimi (en)','infocode tanimi'],'infoName'],
+  [['sema'],'schema'],
+  [['bilgi kodu ve bilgi kodu turevi'],'bilgiTurevi'],
+  [['kalem konum kodu'],'kkk'],
+  [['tam veri modulu kodu (dmc)','tam dmc'],'dmc'],
+  [['model tanimlama kodu'],'mic'],
+  [['sistem ayrim kodu'],'sdc'],
+  [['malzeme kategori kodu'],'malzKat'],
+  [['sistem kodu'],'sysCode'],
+  [['alt ve alt-alt sistem kodu'],'altAltSis'],
+  [['bilesen kodu'],'bilesen'],
+  [['sokum kodu ve turevi','sokum kodu ve sokum kodu turevi'],'sokum'],
+].forEach(function(pair){ pair[0].forEach(function(k){ HEADER_MAP[k]=pair[1]; }); });
+
+function detectDelimiter(line){
+  const cands = {',':0,'\t':0,';':0};
+  for (let i=0;i<line.length;i++){ const ch=line[i]; if (cands.hasOwnProperty(ch)) cands[ch]++; }
+  return Object.keys(cands).reduce((a,b)=> cands[a]>=cands[b]?a:b);
+}
+function parseDelimitedLine(line, delim){
+  const out=[]; let cur=''; let inQ=false;
+  for (let i=0;i<line.length;i++){
+    const c=line[i];
+    if (inQ){
+      if (c==='"'){ if (line[i+1]==='"'){cur+='"'; i++;} else inQ=false; }
+      else cur+=c;
+    } else {
+      if (c==='"') inQ=true;
+      else if (c===delim){ out.push(cur); cur=''; }
+      else cur+=c;
+    }
+  }
+  out.push(cur);
+  return out.map(function(s){return s.trim();});
+}
+function parseDelimitedText(text){
+  text = text.replace(/^\uFEFF/, '');
+  const lines = text.split(/\r\n|\n|\r/).filter(function(l){return l.trim().length>0;});
+  if (!lines.length) return {headers:[], dataRows:[]};
+  const delim = detectDelimiter(lines[0]);
+  const headers = parseDelimitedLine(lines[0], delim);
+  const dataRows = lines.slice(1).map(function(l){return parseDelimitedLine(l, delim);});
+  return {headers:headers, dataRows:dataRows};
+}
+
+const DMC_RE = /^([^-\s]+)-([^-\s]+)-([^-\s]+)-([^-\s]+)-([^-\s]+)-([^-\s]+)-([A-Za-z0-9]{3})([A-Za-z0-9])-([A-Za-z0-9])$/;
+function parseDmcString(dmc){
+  const m = DMC_RE.exec(String(dmc||'').trim());
+  if (!m) return null;
+  return {mic:m[1], sdc:m[2], sysCode:m[3], altAltSis:m[4], bilesen:m[5], sokum:m[6], infoCode:m[7], infoVar:m[8], kkk:m[9]};
+}
+function looksLikeDmc(s){ return DMC_RE.test(String(s||'').trim()); }
+
+let DATA_ROWS = [];
+let TREE = null;
+
+// ---------- ICN / Teknik Görsel durumu ----------
+let ICN_LIBRARY = []; // {code, title, imageDataUrl, naturalWidth, naturalHeight, records:[{hotspot,x,y,partNo,partName,description,qty,nsn,manufacturer}]}
+let ICN_LINKS = {};   // dmc -> icnCode
+function getIcnForRow(dmc){
+  const code = ICN_LINKS[dmc];
+  if (!code) return null;
+  return ICN_LIBRARY.find(function(i){ return i.code===code; }) || null;
+}
+function nextIcnCode(){
+  let n = 1;
+  const used = new Set(ICN_LIBRARY.map(function(i){return i.code;}));
+  let code;
+  do { code = 'ICN-'+SETTINGS.cage+'-'+String(n).padStart(5,'0')+'-001-01'; n++; } while (used.has(code));
+  return code;
+}
+function dataUrlToBytes(dataUrl){
+  const b64 = (dataUrl.split(',')[1]||'');
+  const bin = atob(b64);
+  const u = new Uint8Array(bin.length);
+  for (let i=0;i<bin.length;i++) u[i] = bin.charCodeAt(i);
+  return u;
+}
+function imfIdentFromIcn(icn){ return icn.code.replace(/^ICN-/i,''); }
+function imfFileName(icn){ return 'IMF-'+imfIdentFromIcn(icn)+'_'+SETTINGS.issue+'-00.XML'; }
+function imfObjectCoordinates(icn, rec){
+  const w = icn.naturalWidth||1, h = icn.naturalHeight||1;
+  const halfW = 23.333, halfH = 20;
+  const cx = +rec.x, cy = +rec.y;
+  const l = Math.max(0, cx-halfW), r = Math.min(w, cx+halfW);
+  const t = Math.max(0, cy-halfH), b = Math.min(h, cy+halfH);
+  const f = function(n){ return (Math.round(n*1000)/1000).toString(); };
+  return f(l)+' '+f(t)+','+f(l)+' '+f(b)+','+f(r)+' '+f(b)+','+f(r)+' '+f(t);
+}
+function buildImfXml(icn){
+  const code = imfIdentFromIcn(icn);
+  const objs = [];
+  const w = icn.naturalWidth||1, h = icn.naturalHeight||1;
+  objs.push('<icnObject icnObjectIdent="hot0" icnObjectName="0" icnObjectTitle="'+xmlEscape(icn.title||'ANA MONTAJ')+'" objectCoordinates="0 0,0 '+h+','+w+' '+h+','+w+' 0" />');
+  const located = icn.records.filter(function(r){ return r.hotspot && r.x!=='' && r.y!==''; });
+  located.sort(function(a,b){ return (parseInt(a.hotspot)||0)-(parseInt(b.hotspot)||0); });
+  located.forEach(function(r){
+    objs.push('<icnObject icnObjectIdent="hot'+String(r.hotspot).padStart(3,'0')+'" icnObjectName="'+xmlEscape(r.hotspot)+'" icnObjectTitle="'+xmlEscape(r.partName||r.description||'')+'" objectCoordinates="'+imfObjectCoordinates(icn, r)+'" />');
+  });
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE icnMetadataFile []>\n<icnMetadataFile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_5-0/xml_schema_flat/icnMetadata.xsd">' +
+    '<imfIdentAndStatusSection><imfAddress><imfIdent><imfCode imfIdentIcn="'+xmlEscape(icn.code)+'" /><issueInfo issueNumber="'+SETTINGS.issue+'" inWork="00" /></imfIdent>' +
+    '<imfAddressItems><icnTitle>'+xmlEscape(icn.title||icn.code)+'</icnTitle></imfAddressItems></imfAddress>' +
+    '<imfStatus><security securityClassification="01" /><responsiblePartnerCompany enterpriseCode="'+xmlEscape(SETTINGS.cage)+'"><enterpriseName>'+xmlEscape(SETTINGS.org)+'</enterpriseName></responsiblePartnerCompany>' +
+    '<originator enterpriseCode="'+xmlEscape(SETTINGS.cage)+'"><enterpriseName>'+xmlEscape(SETTINGS.org)+'</enterpriseName></originator><qualityAssurance><unverified /></qualityAssurance></imfStatus></imfIdentAndStatusSection>' +
+    '<imfContent><icnVariation><icnContents><icnObjectGroup>'+objs.join('')+'</icnObjectGroup></icnContents></icnVariation></imfContent></icnMetadataFile>';
+}
+
+function importText(text, encodingNote){
+  const statusEl = document.getElementById('import-status');
+  statusEl.className = 'status-box'; statusEl.textContent='';
+  if (!text || !text.trim()){
+    statusEl.className='status-box status-err'; statusEl.textContent='Boş içerik — önce yapıştırın veya dosya seçin.';
+    return;
+  }
+  const parsed = parseDelimitedText(text);
+  const headers = parsed.headers, dataRows = parsed.dataRows;
+  if (!dataRows.length){
+    statusEl.className='status-box status-err'; statusEl.textContent='Satır bulunamadı.';
+    return;
+  }
+
+  const normHeaders = headers.map(turkishFold);
+  const hasKnownHeader = normHeaders.some(function(h){return HEADER_MAP[h];});
+  let effHeaders = normHeaders, effRows = dataRows;
+  if (!hasKnownHeader){
+    effRows = [headers].concat(dataRows);
+    effHeaders = null;
+  }
+
+  let mode = 'full';
+  const colIndex = {};
+  if (effHeaders){
+    effHeaders.forEach(function(h,i){ if (HEADER_MAP[h]) colIndex[HEADER_MAP[h]] = i; });
+  }
+
+  const onlyDmcCol = (effHeaders && Object.keys(colIndex).length===1 && colIndex.dmc!==undefined) ||
+                      (!effHeaders && effRows[0] && effRows[0].length===1);
+  if (onlyDmcCol || (!colIndex.dmc && !effHeaders)){
+    mode = 'dmc-only';
+  } else if (colIndex.dmc===undefined && Object.keys(colIndex).length===0){
+    mode = 'dmc-only';
+  }
+
+  const rows = [];
+  let skipped = 0;
+  for (let ri=0; ri<effRows.length; ri++){
+    const r = effRows[ri];
+    let raw = {};
+    if (mode==='dmc-only'){
+      const dmcVal = effHeaders ? r[colIndex.dmc!==undefined?colIndex.dmc:0] : r[0];
+      if (!looksLikeDmc(dmcVal)){ skipped++; continue; }
+      const p = parseDmcString(dmcVal);
+      const infoCode = p.infoCode;
+      raw = {
+        dmc: dmcVal.trim(),
+        sns: p.sysCode+'-'+p.altAltSis+'-'+p.bilesen,
+        title: '(başlıksız — sadece DMC\'den içe aktarıldı)',
+        seviye: p.bilesen!=='0000' ? 'Bileşen' : (p.altAltSis!=='00' ? 'Alt-alt Sistem' : 'Sistem'),
+        kategori: '', infoCode: infoCode, infoName: INFO_NAMES[infoCode]||'',
+        schema: INFO_SCHEMA[infoCode]||'bilinmeyen',
+        bilgiTurevi: infoCode+p.infoVar, kkk: p.kkk,
+        mic: p.mic, sdc: p.sdc, malzKat: p.sysCode.charAt(0), sysCode: p.sysCode.slice(1),
+        altAltSis: p.altAltSis, bilesen: p.bilesen, sokum: p.sokum,
+      };
+    } else {
+      const get = function(key){ return colIndex[key]!==undefined ? (r[colIndex[key]]||'') : ''; };
+      let dmc = get('dmc');
+      let infoCode = get('infoCode');
+      if (!dmc && get('mic')){
+        const mic=get('mic')||SETTINGS.mic, sdc=get('sdc')||SETTINGS.sdc;
+        const sys=(get('malzKat')+get('sysCode'))||'';
+        dmc = mic+'-'+sdc+'-'+sys+'-'+get('altAltSis')+'-'+get('bilesen')+'-'+get('sokum')+'-'+get('bilgiTurevi')+'-'+get('kkk');
+      }
+      if (!dmc || !looksLikeDmc(dmc)){ skipped++; continue; }
+      const p = parseDmcString(dmc);
+      if (!infoCode) infoCode = p.infoCode;
+      raw = {
+        dmc: dmc.trim(),
+        sns: get('sns') || (p.sysCode+'-'+p.altAltSis+'-'+p.bilesen),
+        title: get('title') || '(başlıksız)',
+        seviye: get('seviye') || (p.bilesen!=='0000' ? 'Bileşen' : (p.altAltSis!=='00' ? 'Alt-alt Sistem' : 'Sistem')),
+        kategori: get('kategori'),
+        infoCode: infoCode,
+        infoName: get('infoName') || INFO_NAMES[infoCode] || '',
+        schema: INFO_SCHEMA[infoCode] || get('schema') || 'bilinmeyen',
+        bilgiTurevi: get('bilgiTurevi') || (infoCode + p.infoVar),
+        kkk: get('kkk') || p.kkk,
+        mic: get('mic') || p.mic, sdc: get('sdc') || p.sdc,
+        malzKat: get('malzKat') || p.sysCode.charAt(0),
+        sysCode: get('sysCode') || p.sysCode.slice(1),
+        altAltSis: get('altAltSis') || p.altAltSis,
+        bilesen: get('bilesen') || p.bilesen,
+        sokum: get('sokum') || p.sokum,
+      };
+    }
+    rows.push(raw);
+  }
+
+  if (!rows.length){
+    statusEl.className='status-box status-err';
+    statusEl.textContent='Hiçbir satır işlenemedi. "DMC Detay (Tum InfoCode)" sayfasının başlık satırıyla birlikte kopyalandığından veya geçerli DMC kodları içerdiğinden emin olun. (Not: Dosya yükleme artık UTF-8 ve Türkçe Windows (Windows-1254) kodlamalarını otomatik algılar; sorun devam ederse doğrudan kopyala-yapıştır yöntemini deneyin.)';
+    return;
+  }
+
+  DATA_ROWS = rows;
+  buildTree();
+  renderTree();
+  populateSchemaFilter();
+  clearTreeSelection();
+  renderTable();
+
+  const encSuffix = encodingNote ? (' [Kodlama: '+encodingNote+']') : '';
+  if (mode==='dmc-only'){
+    statusEl.className='status-box status-warn';
+    statusEl.textContent = rows.length + ' satır DMC koduna göre içe aktarıldı (başlık/kategori bilgisi yok, sadece DMC\'den türetildi).' +
+      (skipped? (' '+skipped+' satır tanınamadı.'):'') + encSuffix;
+  } else {
+    statusEl.className='status-box status-ok';
+    statusEl.textContent = rows.length + ' satır başarıyla içe aktarıldı.' + (skipped? (' '+skipped+' satır atlandı (geçersiz DMC).'):'') + encSuffix;
+  }
+}
+
+function buildTree(){
+  const root = {children:{}, rows:[]};
+  for (let i=0;i<DATA_ROWS.length;i++){
+    const row = DATA_ROWS[i];
+    const sns = row.sns;
+    const parts = sns.split('-');
+    let node = root;
+    let path = '';
+    for (let j=0;j<parts.length;j++){
+      path = path ? path+'-'+parts[j] : parts[j];
+      if (!node.children[path]) node.children[path] = {code:path, label:parts[j], children:{}, rows:[], full:path, title:null};
+      node = node.children[path];
+    }
+    node.rows.push(row);
+    // Bu tam SNS koduna ait ilk satırın başlığını düğüm başlığı olarak kullan
+    if (!node.title && row.title && row.title.indexOf('başlıksız')===-1) node.title = row.title;
+  }
+  TREE = root;
+}
+function nodeDisplayTitle(node){
+  if (node.title) return node.title;
+  // Doğrudan satırı olmayan ara düğümler için: ilk alt düğümün başlığından türet, yoksa kodu göster
+  const kids = Object.values(node.children);
+  for (const k of kids){ if (k.title) return k.title; }
+  return node.label;
+}
+
+function renderTree(){
+  const container = document.getElementById('tree-root');
+  const keys = Object.keys(TREE.children);
+  if (!keys.length){
+    container.innerHTML = '<div class="empty">Veri bulunamadı.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  const ul = document.createElement('ul');
+  Object.values(TREE.children).sort(function(a,b){return a.code.localeCompare(b.code);}).forEach(function(n){ ul.appendChild(renderTreeNode(n)); });
+  container.appendChild(ul);
+}
+function countAll(node){
+  let c = node.rows.length;
+  const kids = Object.values(node.children);
+  for (let i=0;i<kids.length;i++) c += countAll(kids[i]);
+  return c;
+}
+function renderTreeNode(node){
+  const li = document.createElement('li');
+  const childKeys = Object.keys(node.children);
+  const hasChildren = childKeys.length>0;
+  const div = document.createElement('div');
+  div.className = 'tnode';
+  div.dataset.code = node.full;
+  const arrow = document.createElement('span');
+  arrow.className='arrow';
+  arrow.textContent = hasChildren ? '▸' : '';
+  const codeSpan = document.createElement('span');
+  codeSpan.className='title';
+  codeSpan.textContent = nodeDisplayTitle(node);
+  codeSpan.title = node.full; // hover ile tam SNS kodu görünsün
+  const codeBadge = document.createElement('span');
+  codeBadge.className='code-badge';
+  codeBadge.textContent = node.label;
+  const cnt = document.createElement('span');
+  cnt.className='cnt';
+  cnt.textContent = countAll(node);
+  div.appendChild(arrow); div.appendChild(codeSpan); div.appendChild(codeBadge); div.appendChild(cnt);
+  li.appendChild(div);
+
+  let childUl = null;
+  if (hasChildren){
+    childUl = document.createElement('ul');
+    childUl.className='children';
+    Object.values(node.children).sort(function(a,b){return a.code.localeCompare(b.code);}).forEach(function(n){ childUl.appendChild(renderTreeNode(n)); });
+    li.appendChild(childUl);
+  }
+  div.addEventListener('click', function(e){
+    e.stopPropagation();
+    if (hasChildren){ childUl.classList.toggle('open'); arrow.textContent = childUl.classList.contains('open') ? '▾' : '▸'; }
+    selectTreeNode(node);
+  });
+  return li;
+}
+
+let SELECTED_NODE = null;
+function selectTreeNode(node){
+  SELECTED_NODE = node;
+  document.querySelectorAll('.tnode').forEach(function(el){ el.classList.remove('active'); });
+  const el = document.querySelector('.tnode[data-code="'+CSS.escape(node.full)+'"]');
+  if (el) el.classList.add('active');
+  renderBreadcrumb(node);
+  renderTable();
+}
+function clearTreeSelection(){
+  SELECTED_NODE = null;
+  document.querySelectorAll('.tnode').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('breadcrumb').style.display='none';
+}
+function renderBreadcrumb(node){
+  const bc = document.getElementById('breadcrumb');
+  bc.style.display='flex';
+  const parts = node.full.split('-');
+  let html = '<a id="bc-all">Tüm Ağaç</a>';
+  let cur = TREE, path = '';
+  parts.forEach(function(p){
+    path = path ? path+'-'+p : p;
+    cur = cur.children[path];
+    const label = cur ? nodeDisplayTitle(cur) : p;
+    html += ' <span>&rsaquo;</span> <span class="chip" title="'+escapeAttr(path)+'">'+escapeHtml(label)+'</span>';
+  });
+  html += ' <span style="margin-left:8px;color:#888;">('+node.rows.length+' VM bu düğümde — SNS: '+escapeHtml(node.full)+')</span>';
+  bc.innerHTML = html;
+  document.getElementById('bc-all').onclick = clearAndRender;
+}
+function clearAndRender(){ clearTreeSelection(); renderTable(); }
+
+function populateSchemaFilter(){
+  const sel = document.getElementById('filter-schema');
+  const set = {};
+  DATA_ROWS.forEach(function(r){ set[r.schema]=1; });
+  const schemas = Object.keys(set).sort();
+  sel.innerHTML = '<option value="">Tüm şema türleri</option>' +
+    schemas.map(function(s){ return '<option value="'+s+'">'+s+(SUPPORTED_SCHEMAS.indexOf(s)>=0?'':' (şablon yok)')+'</option>'; }).join('');
+}
+
+let SELECTED_DMCS = new Set();
+function currentFilteredRows(){
+  let rows = SELECTED_NODE ? SELECTED_NODE.rows : DATA_ROWS;
+  const q = turkishFold(document.getElementById('search-box').value);
+  const schemaF = document.getElementById('filter-schema').value;
+  const supportF = document.getElementById('filter-support').value;
+  return rows.filter(function(r){
+    if (q){
+      const hay = turkishFold(r.sns+' '+r.title+' '+r.dmc);
+      if (hay.indexOf(q)===-1) return false;
+    }
+    if (schemaF && r.schema !== schemaF) return false;
+    if (supportF==='yes' && SUPPORTED_SCHEMAS.indexOf(r.schema)===-1) return false;
+    if (supportF==='no' && SUPPORTED_SCHEMAS.indexOf(r.schema)>=0) return false;
+    return true;
+  });
+}
+function renderTable(){
+  const tbody = document.getElementById('rows-tbody');
+  const rows = currentFilteredRows();
+  document.getElementById('row-count').textContent = rows.length + ' satır';
+  if (!rows.length){
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">Bu düğüm/filtre için satır yok.</td></tr>';
+    updateDownloadButton();
+    return;
+  }
+  tbody.innerHTML = '';
+  for (let i=0;i<rows.length;i++){
+    const r = rows[i];
+    const tr = document.createElement('tr');
+    const supported = SUPPORTED_SCHEMAS.indexOf(r.schema)>=0;
+    const hasIcn = !!getIcnForRow(r.dmc);
+    tr.innerHTML =
+      '<td><input type="checkbox" class="row-check" data-dmc="'+escapeAttr(r.dmc)+'" '+(SELECTED_DMCS.has(r.dmc)?'checked':'')+' '+(supported?'':'disabled')+'></td>'+
+      '<td class="dmc-mono">'+escapeHtml(r.sns)+'</td>'+
+      '<td>'+escapeHtml(r.title)+'</td>'+
+      '<td><span class="badge badge-'+(supported?r.schema:'none')+'">'+escapeHtml(r.schema)+'</span></td>'+
+      '<td>'+escapeHtml(r.infoCode)+' <span style="color:#999;">'+escapeHtml(r.infoName)+'</span></td>'+
+      '<td style="text-align:center;" title="'+(hasIcn?'Bağlı görsel: '+escapeAttr(getIcnForRow(r.dmc).code):'')+'">'+(hasIcn?'🖼':'')+'</td>'+
+      '<td class="dmc-mono">'+escapeHtml(r.dmc)+'</td>'+
+      '<td>'+(supported?'<button class="link-btn" data-preview="'+escapeAttr(r.dmc)+'">Önizle</button>':'<span style="color:#bbb;font-size:11px;">Şablon yok</span>')+'</td>';
+    tbody.appendChild(tr);
+  }
+  tbody.querySelectorAll('.row-check').forEach(function(cb){
+    cb.addEventListener('change', function(){
+      if (cb.checked) SELECTED_DMCS.add(cb.dataset.dmc); else SELECTED_DMCS.delete(cb.dataset.dmc);
+      updateDownloadButton();
+    });
+  });
+  tbody.querySelectorAll('[data-preview]').forEach(function(btn){
+    btn.addEventListener('click', function(){ openPreview(btn.dataset.preview); });
+  });
+  updateDownloadButton();
+}
+function updateDownloadButton(){
+  document.getElementById('btn-goto-step2').disabled = SELECTED_DMCS.size===0;
+}
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+document.getElementById('search-box').addEventListener('input', renderTable);
+document.getElementById('filter-schema').addEventListener('change', renderTable);
+document.getElementById('filter-support').addEventListener('change', renderTable);
+document.getElementById('check-all').addEventListener('change', function(e){
+  const rows = currentFilteredRows().filter(function(r){return SUPPORTED_SCHEMAS.indexOf(r.schema)>=0;});
+  if (e.target.checked) rows.forEach(function(r){SELECTED_DMCS.add(r.dmc);});
+  else rows.forEach(function(r){SELECTED_DMCS.delete(r.dmc);});
+  renderTable();
+});
+document.getElementById('btn-select-visible').onclick = function(){
+  currentFilteredRows().filter(function(r){return SUPPORTED_SCHEMAS.indexOf(r.schema)>=0;}).forEach(function(r){SELECTED_DMCS.add(r.dmc);});
+  renderTable();
+};
+document.getElementById('btn-select-none').onclick = function(){ SELECTED_DMCS.clear(); renderTable(); };
+
+document.getElementById('btn-import').onclick = function(){ importText(document.getElementById('paste-area').value); };
+document.getElementById('btn-clear-import').onclick = function(){
+  document.getElementById('paste-area').value='';
+  document.getElementById('import-status').className='status-box';
+};
+document.getElementById('drop-zone').onclick = function(){ document.getElementById('file-input').click(); };
+document.getElementById('file-input').addEventListener('change', function(e){
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const buf = ev.target.result;
+    let text, usedEncoding;
+    try {
+      const utf8Text = new TextDecoder('utf-8', {fatal:false}).decode(buf);
+      if (utf8Text.indexOf('\uFFFD') === -1){
+        text = utf8Text; usedEncoding = 'UTF-8';
+      } else {
+        // Bozuk karakter var -> muhtemelen Turkce Windows/ANSI (Excel varsayilan CSV) kodlamasi
+        text = new TextDecoder('windows-1254', {fatal:false}).decode(buf);
+        usedEncoding = 'Windows-1254 (Türkçe) — otomatik tespit edildi';
+      }
+    } catch(err){
+      text = new TextDecoder('utf-8', {fatal:false}).decode(buf);
+      usedEncoding = 'UTF-8 (yedek)';
+    }
+    importText(text, usedEncoding);
+  };
+  reader.onerror = function(){
+    const statusEl = document.getElementById('import-status');
+    statusEl.className='status-box status-err'; statusEl.textContent='Dosya okunamadı: '+reader.error;
+  };
+  reader.readAsArrayBuffer(f);
+});
+
+function xmlEscape(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function todayParts(){
+  const d = new Date();
+  return {y:d.getFullYear(), m:String(d.getMonth()+1).padStart(2,'0'), d:String(d.getDate()).padStart(2,'0')};
+}
+function identAndStatus(row, infoName){
+  const t = todayParts();
+  const parts = row.dmc.split('-');
+  const sys = parts[2], altAlt = parts[3], bilesen = parts[4], sokum = parts[5];
+  const subSys = altAlt.charAt(0), subSubSys = altAlt.charAt(1);
+  const disassy = sokum.slice(0,2), disassyVar = sokum.slice(2);
+  const infoVar = row.bilgiTurevi ? row.bilgiTurevi.slice(-1) : 'A';
+  return '  <identAndStatusSection>\n' +
+    '    <dmAddress>\n' +
+    '      <dmIdent>\n' +
+    '        <dmCode modelIdentCode="'+xmlEscape(row.mic)+'" systemDiffCode="'+xmlEscape(row.sdc)+'" systemCode="'+xmlEscape(row.malzKat+row.sysCode)+'"\n' +
+    '                subSystemCode="'+xmlEscape(subSys)+'" subSubSystemCode="'+xmlEscape(subSubSys)+'" assyCode="'+xmlEscape(bilesen)+'"\n' +
+    '                disassyCode="'+xmlEscape(disassy)+'" disassyCodeVariant="'+xmlEscape(disassyVar)+'"\n' +
+    '                infoCode="'+xmlEscape(row.infoCode)+'" infoCodeVariant="'+xmlEscape(infoVar)+'" itemLocationCode="'+xmlEscape(row.kkk)+'" />\n' +
+    '        <language languageIsoCode="'+SETTINGS.lang+'" countryIsoCode="'+SETTINGS.country+'" />\n' +
+    '        <issueInfo issueNumber="'+SETTINGS.issue+'" inWork="00" />\n' +
+    '      </dmIdent>\n' +
+    '      <dmAddressItems>\n' +
+    '        <issueDate year="'+t.y+'" month="'+t.m+'" day="'+t.d+'" />\n' +
+    '        <dmTitle>\n' +
+    '          <techName>'+xmlEscape(row.title)+'</techName>\n' +
+    '          <infoName>'+xmlEscape(infoName)+'</infoName>\n' +
+    '        </dmTitle>\n' +
+    '      </dmAddressItems>\n' +
+    '    </dmAddress>\n' +
+    '    <dmStatus issueType="new">\n' +
+    '      <security securityClassification="01" />\n' +
+    '      <dataRestrictions>\n' +
+    '        <restrictionInstructions>\n' +
+    '          <dataDistribution>'+xmlEscape(SETTINGS.projname)+' projesi kapsaminda yetkili kullanicilara aciktir.</dataDistribution>\n' +
+    '          <dataHandling>Bu veri modulu icin ozel bir elleçleme talimati yoktur.</dataHandling>\n' +
+    '          <dataDestruction>Kullanicilar bu veri modulunu kendi yerel prosedurlerine gore imha edebilir.</dataDestruction>\n' +
+    '          <dataDisclosure>Bu veri modulune uygulanan bir yayma sinirlamasi yoktur.</dataDisclosure>\n' +
+    '        </restrictionInstructions>\n' +
+    '      </dataRestrictions>\n' +
+    '      <responsiblePartnerCompany enterpriseCode="'+xmlEscape(SETTINGS.cage)+'">\n' +
+    '        <enterpriseName>'+xmlEscape(SETTINGS.org)+'</enterpriseName>\n' +
+    '      </responsiblePartnerCompany>\n' +
+    '      <originator enterpriseCode="'+xmlEscape(SETTINGS.cage)+'">\n' +
+    '        <enterpriseName>'+xmlEscape(SETTINGS.org)+'</enterpriseName>\n' +
+    '      </originator>\n' +
+    '      <applic>\n' +
+    '        <displayText><simplePara>Tum konfigurasyonlar icin gecerlidir</simplePara></displayText>\n' +
+    '      </applic>\n' +
+    '      <brexDmRef>\n' +
+    '        <dmRef><dmRefIdent><dmCode '+brexAttrs()+' /></dmRefIdent></dmRef>\n' +
+    '      </brexDmRef>\n' +
+    '      <qualityAssurance><unverified /></qualityAssurance>\n' +
+    '    </dmStatus>\n' +
+    '  </identAndStatusSection>';
+}
+function brexAttrs(){
+  const p = SETTINGS.brex.split('-');
+  if (p.length<8) return 'modelIdentCode="S1000D" systemDiffCode="A" systemCode="04" subSystemCode="1" subSubSystemCode="0" assyCode="0301" disassyCode="00" disassyCodeVariant="A" infoCode="022" infoCodeVariant="A" itemLocationCode="D"';
+  return 'modelIdentCode="'+p[0]+'" systemDiffCode="'+p[1]+'" systemCode="'+p[2]+'" subSystemCode="'+p[3].charAt(0)+'" subSubSystemCode="'+(p[3].charAt(1)||'0')+'" assyCode="'+p[4]+'" disassyCode="'+p[5].slice(0,2)+'" disassyCodeVariant="'+p[5].slice(2)+'" infoCode="'+p[6].slice(0,3)+'" infoCodeVariant="'+p[6].slice(3)+'" itemLocationCode="'+p[7]+'"';
+}
+const HEADER = '<?xml version="1.0" encoding="UTF-8"?>\n<dmodule xmlns:xlink="http://www.w3.org/1999/xlink">\n';
+const FOOTER = '\n</dmodule>';
+
+// ---------- ICN / Teknik Görsel entegrasyonu ----------
+function icnDoctype(icnCode){
+  // S1000D VM'lerinde infoEntityIdent bir DTD ENTITY referansıdır; DOCTYPE içinde tanımlanmalı.
+  return '<!DOCTYPE dmodule [<!ENTITY '+icnCode+' SYSTEM "'+icnCode+'.PNG" NDATA png><!NOTATION png PUBLIC "-//W3C//NOTATION PNG 1.0//EN">]>\n';
+}
+function figureBlock(icn, figId){
+  return '<figure id="'+xmlEscape(figId||'fig-0001')+'">\n' +
+         '          <title>'+xmlEscape(icn.title||icn.code)+'</title>\n' +
+         '          <graphic infoEntityIdent="'+xmlEscape(icn.code)+'" />\n' +
+         '        </figure>';
+}
+function injectIcnIntoXml(xml, schema, icn){
+  const fig = figureBlock(icn);
+  if (schema==='descript'){
+    return xml.replace('</levelledPara>', '        '+fig+'\n      </levelledPara>');
+  }
+  if (schema==='proced'){
+    return xml.replace(/<\/proceduralStep>/, '  '+fig+'\n        </proceduralStep>');
+  }
+  if (schema==='ipd'){
+    return xml.replace('<illustratedPartsCatalog>', '<illustratedPartsCatalog>\n    '+fig);
+  }
+  return xml; // fault ve digerlerinde v1'de gomulu figure desteklenmiyor
+}
+function generateXmlWithIcn(row){
+  let xml = generateXml(row);
+  if (xml==null) return null;
+  const icn = getIcnForRow(row.dmc);
+  if (icn){
+    xml = injectIcnIntoXml(xml, row.schema, icn);
+    // DOCTYPE'ı XML bildiriminden hemen sonra ekle
+    xml = xml.replace('?>\n', '?>\n' + icnDoctype(icn.code));
+  }
+  return xml;
+}
+
+function genDescript(row){
+  const content = '  <content>\n' +
+    '    <description>\n' +
+    '      <levelledPara>\n' +
+    '        <title>Genel Tanitim</title>\n' +
+    '        <para>'+xmlEscape(row.title)+' icin genel tanim ve calisma bilgisi bu bolumde yer alir.</para>\n' +
+    '      </levelledPara>\n' +
+    '    </description>\n' +
+    '  </content>';
+  return HEADER + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
+}
+function genProced(row){
+  const content = '  <content>\n' +
+    '    <procedure>\n' +
+    '      <preliminaryRqmts>\n' +
+    '        <reqCondGroup><noConds /></reqCondGroup>\n' +
+    '        <reqSupportEquips><noSupportEquips /></reqSupportEquips>\n' +
+    '        <reqSupplies><noSupplies /></reqSupplies>\n' +
+    '        <reqSpares><noSpares /></reqSpares>\n' +
+    '        <reqSafety><noSafety /></reqSafety>\n' +
+    '      </preliminaryRqmts>\n' +
+    '      <mainProcedure>\n' +
+    '        <proceduralStep>\n' +
+    '          <para>'+xmlEscape(row.title)+' icin "'+xmlEscape(row.infoName)+'" prosedurunun ilk adimi.</para>\n' +
+    '        </proceduralStep>\n' +
+    '      </mainProcedure>\n' +
+    '      <closeRqmts>\n' +
+    '        <reqCondGroup><noConds /></reqCondGroup>\n' +
+    '      </closeRqmts>\n' +
+    '    </procedure>\n' +
+    '  </content>';
+  return HEADER + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
+}
+function genFault(row){
+  let content;
+  const ic = row.infoCode;
+  if (ic==='411'){
+    content = '  <content>\n' +
+      '    <faultReporting>\n' +
+      '      <isolatedFault id="flt-0001" faultCode="AAAA000">\n' +
+      '        <faultDescr><descr>'+xmlEscape(row.title)+' igin izole edilmis ariza aciklamasi.</descr></faultDescr>\n' +
+      '        <locateAndRepair>\n' +
+      '          <locateAndRepairLruItem>\n' +
+      '            <lru><name>'+xmlEscape(row.title)+'</name></lru>\n' +
+      '          </locateAndRepairLruItem>\n' +
+      '        </locateAndRepair>\n' +
+      '      </isolatedFault>\n' +
+      '    </faultReporting>\n' +
+      '  </content>';
+  } else if (ic==='412'){
+    content = '  <content>\n' +
+      '    <faultReporting>\n' +
+      '      <detectedFault id="flt-0001" faultCode="AAAA000">\n' +
+      '        <faultDescr><descr>'+xmlEscape(row.title)+' igin tespit edilen ariza aciklamasi.</descr></faultDescr>\n' +
+      '      </detectedFault>\n' +
+      '    </faultReporting>\n' +
+      '  </content>';
+  } else if (ic==='413'){
+    content = '  <content>\n' +
+      '    <faultReporting>\n' +
+      '      <observedFault id="flt-0001" faultCode="AAAA000">\n' +
+      '        <faultDescr><descr>'+xmlEscape(row.title)+' igin gozlemlenen ariza aciklamasi.</descr></faultDescr>\n' +
+      '        <contextAndIsolationInfo>\n' +
+      '          <isolationInfo>\n' +
+      '            <lruItem>\n' +
+      '              <lru><name>'+xmlEscape(row.title)+'</name></lru>\n' +
+      '            </lruItem>\n' +
+      '          </isolationInfo>\n' +
+      '        </contextAndIsolationInfo>\n' +
+      '      </observedFault>\n' +
+      '    </faultReporting>\n' +
+      '  </content>';
+  } else if (ic==='414'){
+    content = '  <content>\n' +
+      '    <faultReporting>\n' +
+      '      <correlatedFault id="flt-0001">\n' +
+      '        <basicCorrelatedFaults />\n' +
+      '        <isolateDetectedFault>\n' +
+      '          <lruItem>\n' +
+      '            <lru><name>'+xmlEscape(row.title)+'</name></lru>\n' +
+      '          </lruItem>\n' +
+      '        </isolateDetectedFault>\n' +
+      '      </correlatedFault>\n' +
+      '    </faultReporting>\n' +
+      '  </content>';
+  } else if (ic==='410'){
+    content = '  <content>\n' +
+      '    <faultReporting>\n' +
+      '      <observedFault id="flt-0001" faultCode="AAAA000">\n' +
+      '        <faultDescr><descr>'+xmlEscape(row.title)+' igin genel ariza aciklamasi (410 - varsayim: observedFault kalibi kullanildi).</descr></faultDescr>\n' +
+      '        <contextAndIsolationInfo>\n' +
+      '          <isolationInfo>\n' +
+      '            <lruItem>\n' +
+      '              <lru><name>'+xmlEscape(row.title)+'</name></lru>\n' +
+      '            </lruItem>\n' +
+      '          </isolationInfo>\n' +
+      '        </contextAndIsolationInfo>\n' +
+      '      </observedFault>\n' +
+      '    </faultReporting>\n' +
+      '  </content>';
+  } else {
+    content = '  <content>\n' +
+      '    <faultIsolation>\n' +
+      '      <preliminaryRqmts>\n' +
+      '        <reqCondGroup><noConds /></reqCondGroup>\n' +
+      '        <reqSupportEquips><noSupportEquips /></reqSupportEquips>\n' +
+      '        <reqSupplies><noSupplies /></reqSupplies>\n' +
+      '        <reqSpares><noSpares /></reqSpares>\n' +
+      '        <reqSafety><noSafety /></reqSafety>\n' +
+      '      </preliminaryRqmts>\n' +
+      '      <faultIsolationProcedure id="fip0001">\n' +
+      '        <fault faultCode="AAAA000" />\n' +
+      '        <faultDescr><descr>'+xmlEscape(row.title)+' igin genel ariza aciklamasi.</descr></faultDescr>\n' +
+      '        <isolationProcedure>\n' +
+      '          <preliminaryRqmts>\n' +
+      '            <reqCondGroup><noConds /></reqCondGroup>\n' +
+      '            <reqSupportEquips><noSupportEquips /></reqSupportEquips>\n' +
+      '            <reqSupplies><noSupplies /></reqSupplies>\n' +
+      '            <reqSpares><noSpares /></reqSpares>\n' +
+      '            <reqSafety><noSafety /></reqSafety>\n' +
+      '          </preliminaryRqmts>\n' +
+      '          <isolationMainProcedure>\n' +
+      '            <isolationProcedureEnd id="ipe0001">\n' +
+      '              <title>Sonuc</title>\n' +
+      '              <action>Arizali bilesen/parcayi tespit edip degistirin.</action>\n' +
+      '            </isolationProcedureEnd>\n' +
+      '          </isolationMainProcedure>\n' +
+      '          <closeRqmts><reqCondGroup><noConds /></reqCondGroup></closeRqmts>\n' +
+      '        </isolationProcedure>\n' +
+      '      </faultIsolationProcedure>\n' +
+      '    </faultIsolation>\n' +
+      '  </content>';
+  }
+  return HEADER + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
+}
+function genIpd(row){
+  const content = '  <content>\n' +
+    '    <illustratedPartsCatalog>\n' +
+    '      <catalogSeqNumber indenture="1" systemCode="'+xmlEscape(row.malzKat+row.sysCode)+'" subSystemCode="'+xmlEscape(row.altAltSis.charAt(0))+'"\n' +
+    '                        subSubSystemCode="'+xmlEscape(row.altAltSis.charAt(1))+'" assyCode="'+xmlEscape(row.bilesen)+'" figureNumber="01" item="000">\n' +
+    '        <itemSeqNumber itemSeqNumberValue="00A">\n' +
+    '          <reasonForSelection reasonForSelectionValue="0" />\n' +
+    '          <quantityPerNextHigherAssy>1</quantityPerNextHigherAssy>\n' +
+    '          <partRef manufacturerCodeValue="'+xmlEscape(SETTINGS.cage)+'" partNumberValue="'+xmlEscape(row.sns)+'" />\n' +
+    '          <partSegment>\n' +
+    '            <itemIdentData><descrForPart>'+xmlEscape(row.title)+'</descrForPart></itemIdentData>\n' +
+    '          </partSegment>\n' +
+    '        </itemSeqNumber>\n' +
+    '      </catalogSeqNumber>\n' +
+    '    </illustratedPartsCatalog>\n' +
+    '  </content>';
+  return HEADER + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
+}
+function generateXml(row){
+  switch(row.schema){
+    case 'descript': return genDescript(row);
+    case 'proced': return genProced(row);
+    case 'fault': return genFault(row);
+    case 'ipd': return genIpd(row);
+    default: return null;
+  }
+}
+function fileNameFor(row){
+  return 'DMC-'+row.dmc+'_'+SETTINGS.issue+'-00_'+SETTINGS.lang.toUpperCase()+'-'+SETTINGS.country.toUpperCase()+'.XML';
+}
+
+function findRowByDmc(dmc){ return DATA_ROWS.find(function(r){return r.dmc===dmc;}); }
+function openPreview(dmc){
+  const row = findRowByDmc(dmc);
+  if (!row) return;
+  const xml = generateXmlWithIcn(row);
+  document.getElementById('drawer-title').textContent = fileNameFor(row);
+  document.getElementById('drawer-content').textContent = xml;
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-bg').classList.add('open');
+  document.getElementById('drawer-download').onclick = function(){ downloadText(fileNameFor(row), xml); };
+}
+document.getElementById('drawer-close').onclick = closeDrawer;
+document.getElementById('drawer-bg').onclick = closeDrawer;
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-bg').classList.remove('open');
+}
+function downloadText(filename, text){
+  const blob = new Blob([text], {type:'application/xml'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+const CRC_TABLE = (function(){
+  let c, table = [];
+  for (let n=0;n<256;n++){
+    c = n;
+    for (let k=0;k<8;k++) c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1);
+    table[n]=c>>>0;
+  }
+  return table;
+})();
+function crc32(bytes){
+  let crc = 0xFFFFFFFF;
+  for (let i=0;i<bytes.length;i++) crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc>>>8);
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+function strToBytes(str){ return new TextEncoder().encode(str); }
+function dosDateTime(){
+  const d = new Date();
+  const dosTime = ((d.getHours()&0x1F)<<11) | ((d.getMinutes()&0x3F)<<5) | ((d.getSeconds()>>1)&0x1F);
+  const dosDate = (((d.getFullYear()-1980)&0x7F)<<9) | (((d.getMonth()+1)&0xF)<<5) | (d.getDate()&0x1F);
+  return {dosTime:dosTime, dosDate:dosDate};
+}
+function u16(n){ return [n&0xFF, (n>>>8)&0xFF]; }
+function u32(n){ return [n&0xFF, (n>>>8)&0xFF, (n>>>16)&0xFF, (n>>>24)&0xFF]; }
+function buildZip(files){
+  const dt = dosDateTime();
+  const dosTime = dt.dosTime, dosDate = dt.dosDate;
+  let localParts = [], centralParts = [], offset = 0;
+  for (let i=0;i<files.length;i++){
+    const f = files[i];
+    const nameBytes = strToBytes(f.name);
+    const data = f.data;
+    const crc = crc32(data);
+    const size = data.length;
+    const localHeader = [].concat(
+      u32(0x04034b50), u16(20), u16(0), u16(0), u16(dosTime), u16(dosDate),
+      u32(crc), u32(size), u32(size), u16(nameBytes.length), u16(0)
+    );
+    const localArr = new Uint8Array(localHeader.length + nameBytes.length + data.length);
+    localArr.set(localHeader, 0); localArr.set(nameBytes, localHeader.length); localArr.set(data, localHeader.length+nameBytes.length);
+    localParts.push(localArr);
+    const centralHeader = [].concat(
+      u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(dosTime), u16(dosDate),
+      u32(crc), u32(size), u32(size), u16(nameBytes.length), u16(0), u16(0), u16(0), u16(0),
+      u32(0), u32(offset)
+    );
+    const centralArr = new Uint8Array(centralHeader.length + nameBytes.length);
+    centralArr.set(centralHeader, 0); centralArr.set(nameBytes, centralHeader.length);
+    centralParts.push(centralArr);
+    offset += localArr.length;
+  }
+  const centralStart = offset;
+  let centralSize = 0;
+  centralParts.forEach(function(p){centralSize+=p.length;});
+  const eocdArr = [].concat(
+    u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length),
+    u32(centralSize), u32(centralStart), u16(0)
+  );
+  const eocd = new Uint8Array(eocdArr);
+  const total = offset + centralSize + eocd.length;
+  const out = new Uint8Array(total);
+  let p=0;
+  for (let i=0;i<localParts.length;i++){ out.set(localParts[i],p); p+=localParts[i].length; }
+  for (let i=0;i<centralParts.length;i++){ out.set(centralParts[i],p); p+=centralParts[i].length; }
+  out.set(eocd,p);
+  return out;
+}
+
+function downloadVmZip(dmcList, filenameSuffix){
+  const files = [];
+  const seenNames = {};
+  const includedIcnCodes = new Set();
+  for (let i=0;i<dmcList.length;i++){
+    const row = findRowByDmc(dmcList[i]);
+    if (!row) continue;
+    const xml = generateXmlWithIcn(row);
+    if (xml==null) continue;
+    let name = fileNameFor(row);
+    let n=1;
+    while (seenNames[name]){ name = fileNameFor(row).replace('.XML', '_'+n+'.XML'); n++; }
+    seenNames[name]=true;
+    files.push({name:name, data: strToBytes(xml)});
+    // Bu satıra bağlı bir ICN varsa, PNG + IMF çiftini de aynı ZIP'e ekle (bir kez)
+    const icn = getIcnForRow(row.dmc);
+    if (icn && !includedIcnCodes.has(icn.code)){
+      includedIcnCodes.add(icn.code);
+      files.push({name: icn.code+'.PNG', data: dataUrlToBytes(icn.imageDataUrl)});
+      files.push({name: imfFileName(icn), data: strToBytes(buildImfXml(icn))});
+    }
+  }
+  if (!files.length) return;
+  const zipBytes = buildZip(files);
+  const blob = new Blob([zipBytes], {type:'application/zip'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const slug = (SETTINGS.projname||'proje').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+  a.href = url; a.download = slug+'_S1000D_VM_'+files.length+(filenameSuffix||'adet')+'.zip';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* ============================================================
+   ADIM 4/5 — SONRAKİ ADIM SİHİRBAZI (VM üretildikten sonra)
+   ============================================================ */
+let STEP2_DMCS = [];
+
+document.getElementById('btn-goto-step2').onclick = function(){
+  STEP2_DMCS = Array.from(SELECTED_DMCS);
+  if (!STEP2_DMCS.length) return;
+  document.getElementById('step2-empty').style.display = 'none';
+  document.getElementById('step2-body').style.display = 'block';
+  document.getElementById('icn-builder-card').style.display = 'none';
+  document.getElementById('step2-count').textContent = STEP2_DMCS.length;
+  const listEl = document.getElementById('step2-selected-list');
+  listEl.innerHTML = STEP2_DMCS.map(function(dmc){
+    const row = findRowByDmc(dmc);
+    if (!row) return '';
+    return '<div>• <b>'+escapeHtml(row.sns)+'</b> — '+escapeHtml(row.title)+' <span style="color:#bbb;">('+escapeHtml(row.schema)+'/'+escapeHtml(row.infoCode)+')</span></div>';
+  }).join('');
+  document.getElementById('step2-card').scrollIntoView({behavior:'smooth', block:'start'});
+};
+
+document.getElementById('btn-choice-auto').onclick = function(){
+  downloadVmZip(STEP2_DMCS, 'adet');
+};
+
+document.getElementById('btn-choice-icn').onclick = function(){
+  document.getElementById('icn-builder-card').style.display = 'block';
+  renderIcnTargetChecklist();
+  document.getElementById('icn-builder-card').scrollIntoView({behavior:'smooth', block:'start'});
+};
+
+document.getElementById('icn-back-btn').onclick = function(){
+  document.getElementById('icn-builder-card').style.display = 'none';
+  document.getElementById('step2-card').scrollIntoView({behavior:'smooth', block:'start'});
+};
+
+function renderIcnTargetChecklist(){
+  const el = document.getElementById('icn-target-checklist');
+  if (!STEP2_DMCS.length){ el.innerHTML = '<div style="color:#999;">Hedef VM yok.</div>'; return; }
+  el.innerHTML = STEP2_DMCS.map(function(dmc){
+    const row = findRowByDmc(dmc);
+    if (!row) return '';
+    return '<label style="display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer;">'+
+      '<input type="checkbox" class="icn-target-cb" data-dmc="'+escapeAttr(dmc)+'" checked>'+
+      '<span><b>'+escapeHtml(row.sns)+'</b> — '+escapeHtml(row.title)+' <span style="color:#bbb;">('+escapeHtml(row.schema)+'/'+escapeHtml(row.infoCode)+')</span></span>'+
+      '</label>';
+  }).join('');
+}
+
+document.getElementById('logo-img').src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSIyNCI+PHRleHQgeD0iMCIgeT0iMTgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMxRjFCNEQiPktvbHVtYW48L3RleHQ+PC9zdmc+";
+
+/* ============================================================
+   ICN / TEKNİK GÖRSEL OLUŞTURUCU
+   ============================================================ */
+let ICN_IMAGE = null;        // {dataUrl, naturalWidth, naturalHeight}
+let ICN_RECORDS = [];        // aktif düzenlenen hotspot kayıtları
+let ICN_SELECTED_ROW = -1;
+
+const ICN_PARTS_HEADER_MAP = {};
+[
+  [['konum'],'hotspot'],
+  [['parca numarasi','reference number','part number','refno'],'partNo'],
+  [['parca adi','item name','approved item name'],'partName'],
+  [['parca aciklamasi','description'],'description'],
+  [['onerilen miktar','qty','quantity'],'qty'],
+  [['ncage','cage','uretici kodu','manufacturer code'],'manufacturer'],
+  [['nsn','nato stok numarasi','natural stock number','nato stock number'],'nsn'],
+  [['fsc'],'fsc'],
+  [['niin'],'niin'],
+].forEach(function(pair){ pair[0].forEach(function(k){ ICN_PARTS_HEADER_MAP[k]=pair[1]; }); });
+
+function icnParsePartsText(text){
+  const parsed = parseDelimitedText(text);
+  if (!parsed.dataRows.length) return [];
+  const normHeaders = parsed.headers.map(turkishFold);
+  const colIndex = {};
+  normHeaders.forEach(function(h,i){ if (ICN_PARTS_HEADER_MAP[h]) colIndex[ICN_PARTS_HEADER_MAP[h]] = i; });
+  if (colIndex.hotspot===undefined){
+    return []; // Konum sutunu yoksa eslestirme yapilamaz
+  }
+  const out = [];
+  parsed.dataRows.forEach(function(r){
+    const get = function(key){ return colIndex[key]!==undefined ? (r[colIndex[key]]||'').trim() : ''; };
+    const hotspot = get('hotspot');
+    if (!hotspot) return;
+    out.push({hotspot:hotspot, x:'', y:'', partNo:get('partNo'), partName:get('partName'),
+      description:get('description'), qty:get('qty')||'1', manufacturer:get('manufacturer'),
+      nsn:get('nsn'), fsc:get('fsc'), niin:get('niin')});
+  });
+  return out;
+}
+function icnPartsStatus(msg, cls){
+  const el = document.getElementById('icn-parts-status');
+  el.className = 'status-box status-'+cls; el.textContent = msg;
+}
+function icnUpdateOcrReady(){
+  const ready = !!(ICN_IMAGE && ICN_RECORDS && ICN_RECORDS.length>0);
+  document.getElementById('icn-ocr-btn').disabled = !ready;
+}
+
+function icnImportPartsText(text, encodingNote){
+  const recs = icnParsePartsText(text);
+  if (!recs.length){
+    icnPartsStatus('Parça listesi okunamadı. "Konum" (veya "Reference Number") sütunu bulunamadı.', 'err');
+    return;
+  }
+  ICN_RECORDS = recs;
+  icnPartsStatus(recs.length + ' parça satırı içe aktarıldı.' + (encodingNote?(' [Kodlama: '+encodingNote+']'):''), 'ok');
+  renderIcnHotspotTable();
+  drawIcnCanvas();
+  document.getElementById('icn-hotspot-wrap').style.display = 'block';
+  suggestIcnDefaults();
+  icnUpdateOcrReady();
+}
+document.getElementById('icn-parts-import').onclick = function(){ icnImportPartsText(document.getElementById('icn-parts-paste').value); };
+document.getElementById('icn-csv-drop').onclick = function(){ document.getElementById('icn-csv-input').click(); };
+document.getElementById('icn-csv-input').addEventListener('change', function(e){
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const buf = ev.target.result;
+    let text, enc;
+    const utf8Text = new TextDecoder('utf-8', {fatal:false}).decode(buf);
+    if (utf8Text.indexOf('\uFFFD') === -1){ text = utf8Text; enc = 'UTF-8'; }
+    else { text = new TextDecoder('windows-1254', {fatal:false}).decode(buf); enc = 'Windows-1254 (otomatik tespit)'; }
+    icnImportPartsText(text, enc);
+  };
+  reader.readAsArrayBuffer(f);
+});
+
+document.getElementById('icn-drop').onclick = function(){ document.getElementById('icn-image-input').click(); };
+document.getElementById('icn-image-input').addEventListener('change', function(e){
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const img = new Image();
+    img.onload = function(){
+      ICN_IMAGE = {dataUrl: ev.target.result, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight, img: img};
+      document.getElementById('icn-canvas-wrap').style.display = 'block';
+      drawIcnCanvas();
+      suggestIcnDefaults();
+      icnUpdateOcrReady();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(f);
+});
+
+function suggestIcnDefaults(){
+  const codeField = document.getElementById('icn-code-field');
+  if (!codeField.value) codeField.value = nextIcnCode();
+}
+
+function drawIcnCanvas(){
+  if (!ICN_IMAGE) return;
+  const canvas = document.getElementById('icn-canvas');
+  canvas.width = ICN_IMAGE.naturalWidth;
+  canvas.height = ICN_IMAGE.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(ICN_IMAGE.img, 0, 0);
+  ICN_RECORDS.forEach(function(r, i){
+    if (r.x==='' || r.y==='') return;
+    const x = +r.x, y = +r.y;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI*2);
+    ctx.fillStyle = i===ICN_SELECTED_ROW ? 'rgba(255,122,0,.30)' : 'rgba(14,124,123,.22)';
+    ctx.fill();
+    ctx.lineWidth = i===ICN_SELECTED_ROW ? 3 : 2;
+    ctx.strokeStyle = i===ICN_SELECTED_ROW ? '#ff7a00' : '#0E7C7B';
+    ctx.stroke();
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#b42318';
+    ctx.fillText(r.hotspot, x, y);
+    ctx.restore();
+  });
+}
+document.getElementById('icn-canvas').addEventListener('click', function(e){
+  if (ICN_SELECTED_ROW < 0 || !ICN_RECORDS[ICN_SELECTED_ROW]){
+    icnPartsStatus('Önce tablodan bir konum satırı seçin, sonra görsele tıklayın.', 'warn');
+    return;
+  }
+  const canvas = e.currentTarget;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = Math.round((e.clientX - rect.left) * scaleX);
+  const y = Math.round((e.clientY - rect.top) * scaleY);
+  ICN_RECORDS[ICN_SELECTED_ROW].x = x;
+  ICN_RECORDS[ICN_SELECTED_ROW].y = y;
+  // bir sonraki konumlandırılmamış satıra otomatik gec
+  const next = ICN_RECORDS.findIndex(function(r,i){ return i>ICN_SELECTED_ROW && r.x===''; });
+  ICN_SELECTED_ROW = next>=0 ? next : ICN_SELECTED_ROW;
+  renderIcnHotspotTable();
+  drawIcnCanvas();
+});
+
+function renderIcnHotspotTable(){
+  const tbody = document.getElementById('icn-hotspot-tbody');
+  tbody.innerHTML = '';
+  ICN_RECORDS.forEach(function(r, i){
+    const tr = document.createElement('tr');
+    if (i===ICN_SELECTED_ROW) tr.style.outline = '2px solid #ff7a00';
+    tr.style.cursor = 'pointer';
+    tr.innerHTML =
+      '<td><b>'+escapeHtml(r.hotspot)+'</b></td>'+
+      '<td>'+escapeHtml(r.partNo)+'</td>'+
+      '<td>'+escapeHtml(r.partName)+'</td>'+
+      '<td>'+(r.x===''?'<span style="color:#bbb;">—</span>':escapeHtml(String(r.x)))+'</td>'+
+      '<td>'+(r.y===''?'<span style="color:#bbb;">—</span>':escapeHtml(String(r.y)))+'</td>';
+    tr.addEventListener('click', function(){ ICN_SELECTED_ROW = i; renderIcnHotspotTable(); drawIcnCanvas(); });
+    tbody.appendChild(tr);
+  });
+}
+
+// ---------- VM'e bağlama araması ----------
+document.getElementById('icn-save-btn').onclick = function(){
+  const st = document.getElementById('icn-link-status');
+  if (!ICN_IMAGE){ st.className='status-box status-err'; st.textContent='Önce bir teknik görsel yükleyin.'; return; }
+  const code = document.getElementById('icn-code-field').value.trim();
+  if (!code || !/^ICN-/i.test(code)){ st.className='status-box status-err'; st.textContent='Geçerli bir ICN kodu girin (ICN- ile başlamalı).'; return; }
+  const title = document.getElementById('icn-title-field').value.trim() || code;
+
+  const targets = Array.from(document.querySelectorAll('.icn-target-cb:checked')).map(function(cb){ return cb.dataset.dmc; });
+  if (!targets.length){ st.className='status-box status-err'; st.textContent='En az bir hedef VM seçin (yukarıdaki listeden).'; return; }
+
+  const existingIdx = ICN_LIBRARY.findIndex(function(i){ return i.code===code; });
+  const icnEntry = {
+    code: code, title: title, imageDataUrl: ICN_IMAGE.dataUrl,
+    naturalWidth: ICN_IMAGE.naturalWidth, naturalHeight: ICN_IMAGE.naturalHeight,
+    records: ICN_RECORDS.map(function(r){ return Object.assign({}, r); }),
+  };
+  if (existingIdx>=0) ICN_LIBRARY[existingIdx] = icnEntry; else ICN_LIBRARY.push(icnEntry);
+  document.getElementById('icn-library-count').textContent = ICN_LIBRARY.length;
+  document.getElementById('icn-zip-btn').disabled = false;
+
+  targets.forEach(function(dmc){ ICN_LINKS[dmc] = code; });
+  renderTable();
+
+  st.className = 'status-box status-ok';
+  st.textContent = 'ICN kaydedildi: '+code+'. '+targets.length+' VM\'e bağlandı: '+targets.join(', ');
+};
+
+document.getElementById('icn-zip-btn').onclick = function(){
+  const code = document.getElementById('icn-code-field').value.trim();
+  const icn = ICN_LIBRARY.find(function(i){ return i.code===code; });
+  if (!icn) return;
+  // Bu ICN'e bagli TUM VM'leri (STEP2_DMCS icinde ve ICN_LINKS'te bu koda esitlenmis olanlari) da pakete dahil et
+  const linkedDmcs = STEP2_DMCS.filter(function(dmc){ return ICN_LINKS[dmc]===code; });
+  const files = [
+    {name: icn.code+'.PNG', data: dataUrlToBytes(icn.imageDataUrl)},
+    {name: imfFileName(icn), data: strToBytes(buildImfXml(icn))},
+  ];
+  const seenNames = {};
+  linkedDmcs.forEach(function(dmc){
+    const row = findRowByDmc(dmc);
+    if (!row) return;
+    const xml = generateXmlWithIcn(row);
+    if (xml==null) return;
+    let name = fileNameFor(row);
+    let n=1;
+    while (seenNames[name]){ name = fileNameFor(row).replace('.XML', '_'+n+'.XML'); n++; }
+    seenNames[name]=true;
+    files.push({name:name, data: strToBytes(xml)});
+  });
+  const zipBytes = buildZip(files);
+  const blob = new Blob([zipBytes], {type:'application/zip'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = icn.code+'_VM_ICN_IMF.zip';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+};
+
+/* ============================================================
+   TESSERACT OCR — ETKİN NOKTA (HOTSPOT) OTOMATİK TESPİTİ
+   RPK Builder Professional V16.3'ün kanıtlanmış OCR mantığından uyarlanmıştır.
+   ============================================================ */
+let TESSERACT_LOAD_PROMISE = null;
+const TESSERACT_CDN_URLS = [
+  'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',
+  'https://unpkg.com/tesseract.js@5/dist/tesseract.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js',
+];
+function loadScriptOnce(src){
+  return new Promise(function(resolve, reject){
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = function(){ resolve(); };
+    s.onerror = function(){ reject(new Error('yüklenemedi: '+src)); };
+    document.head.appendChild(s);
+  });
+}
+function loadTesseract(){
+  if (window.Tesseract) return Promise.resolve();
+  if (TESSERACT_LOAD_PROMISE) return TESSERACT_LOAD_PROMISE;
+  TESSERACT_LOAD_PROMISE = (async function(){
+    let lastErr = null;
+    for (const url of TESSERACT_CDN_URLS){
+      try { await loadScriptOnce(url); if (window.Tesseract) return; }
+      catch(e){ lastErr = e; }
+    }
+    throw new Error('Tesseract.js hiçbir kaynaktan yüklenemedi (denenen adresler: '+TESSERACT_CDN_URLS.length+'). Kurum ağınız CDN erişimini engelliyor olabilir — bu durumda tablodan satır seçip görsele elle tıklayarak devam edebilirsiniz.');
+  })();
+  return TESSERACT_LOAD_PROMISE;
+}
+function makeOcrCanvas(kind, scale){
+  const W = ICN_IMAGE.naturalWidth, H = ICN_IMAGE.naturalHeight;
+  const c = document.createElement('canvas'); c.width = W*scale; c.height = H*scale;
+  const x = c.getContext('2d', {willReadFrequently:true});
+  x.fillStyle = '#fff'; x.fillRect(0,0,c.width,c.height);
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  x.drawImage(ICN_IMAGE.img, 0, 0, c.width, c.height);
+  if (kind==='gray') return c;
+  const im = x.getImageData(0,0,c.width,c.height), p = im.data;
+  const g = new Uint8Array(c.width*c.height);
+  for (let i=0;i<g.length;i++) g[i] = Math.round(.299*p[i*4]+.587*p[i*4+1]+.114*p[i*4+2]);
+  if (kind==='otsu'){
+    const hist = new Uint32Array(256); for (let i=0;i<g.length;i++) hist[g[i]]++;
+    let total=g.length, sum=0; for (let i=0;i<256;i++) sum+=i*hist[i];
+    let sumB=0, wB=0, max=0, t=145;
+    for (let i=0;i<256;i++){
+      wB+=hist[i]; if(!wB) continue;
+      const wF=total-wB; if(!wF) break;
+      sumB+=i*hist[i];
+      const mB=sumB/wB, mF=(sum-sumB)/wF, b=wB*wF*(mB-mF)*(mB-mF);
+      if(b>max){max=b;t=i;}
+    }
+    for (let i=0;i<g.length;i++){ const v = g[i]<t?0:255; p[i*4]=p[i*4+1]=p[i*4+2]=v; p[i*4+3]=255; }
+  } else {
+    const W2=c.width, H2=c.height, integral=new Float64Array((W2+1)*(H2+1));
+    for (let y=1;y<=H2;y++){ let row=0; for (let xx=1;xx<=W2;xx++){ row+=g[(y-1)*W2+xx-1]; integral[y*(W2+1)+xx]=integral[(y-1)*(W2+1)+xx]+row; } }
+    const r=15, C=10;
+    for (let y=0;y<H2;y++){
+      for (let xx=0;xx<W2;xx++){
+        const x0=Math.max(0,xx-r), x1=Math.min(W2-1,xx+r), y0=Math.max(0,y-r), y1=Math.min(H2-1,y+r);
+        const A=integral[y0*(W2+1)+x0], B=integral[y0*(W2+1)+x1+1], D=integral[(y1+1)*(W2+1)+x0], E=integral[(y1+1)*(W2+1)+x1+1];
+        const mean=(E-B-D+A)/((x1-x0+1)*(y1-y0+1)), v=g[y*W2+xx]<(mean-C)?0:255;
+        const i=(y*W2+xx)*4; p[i]=p[i+1]=p[i+2]=v; p[i+3]=255;
+      }
+    }
+  }
+  x.putImageData(im,0,0); return c;
+}
+function ocrEditDistance(a,b){
+  const m=a.length,n=b.length,d=[];
+  for(let i=0;i<=m;i++){ d[i]=[i]; }
+  for(let j=0;j<=n;j++){ d[0][j]=j; }
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
+    d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return d[m][n];
+}
+function matchOcrToken(raw, expected){
+  const digits = String(raw||'').replace(/\D/g,'');
+  if (!digits) return [];
+  const out = [], normalized = digits.replace(/^0+(?=\d)/,'');
+  for (const val of expected){
+    if (digits===val || normalized===val) out.push({val:val, quality:100, start:0, end:digits.length});
+    const pos = digits.indexOf(val);
+    if (pos>=0 && digits.length<=10) out.push({val:val, quality:88, start:pos, end:pos+val.length});
+    if (digits.length===val.length && ocrEditDistance(digits,val)===1) out.push({val:val, quality:62, start:0, end:digits.length});
+  }
+  const seen = {}; return out.filter(function(x){ if(seen[x.val]) return false; seen[x.val]=true; return true; });
+}
+async function icnDetectHotspotsOcr(){
+  const statusEl = document.getElementById('icn-ocr-status');
+  if (!ICN_IMAGE || !ICN_RECORDS.length){
+    statusEl.className = 'status-box status-err';
+    statusEl.textContent = 'Önce görsel ve parça listesini yükleyin.';
+    return;
+  }
+  statusEl.className = 'status-box status-warn';
+  statusEl.textContent = 'Tesseract OCR motoru yükleniyor... (ilk kullanımda internet gerekir)';
+  try { await loadTesseract(); }
+  catch(e){
+    statusEl.className = 'status-box status-err';
+    statusEl.textContent = 'Tesseract OCR yüklenemedi: '+e.message+' — internet bağlantısını kontrol edin veya tablodan satır seçip görsele elle tıklayın.';
+    return;
+  }
+  const expected = Array.from(new Set(ICN_RECORDS.map(function(r){ return String(r.hotspot).trim(); }).filter(function(v){ return v && v!=='0'; })));
+  const passes = [
+    {kind:'gray', scale:2, psm:'11'}, {kind:'otsu', scale:2, psm:'11'},
+    {kind:'adaptive', scale:3, psm:'11'}, {kind:'adaptive', scale:3, psm:'12'}
+  ];
+  statusEl.textContent = 'Tesseract OCR motoru başlatılıyor…';
+  const worker = await Tesseract.createWorker('eng', 1, {
+    logger: function(m){
+      if (m.status==='recognizing text'){
+        statusEl.textContent = 'OCR çalışıyor: %'+Math.round((m.progress||0)*100);
+      } else {
+        statusEl.textContent = 'OCR: '+m.status;
+      }
+    }
+  });
+  await worker.setParameters({tessedit_char_whitelist:'0123456789', preserve_interword_spaces:'1'});
+  const all = [];
+  try {
+    for (let pi=0; pi<passes.length; pi++){
+      const pass = passes[pi];
+      const canvas = makeOcrCanvas(pass.kind, pass.scale);
+      await worker.setParameters({tessedit_pageseg_mode: pass.psm});
+      statusEl.textContent = (pi+1)+'/'+passes.length+' OCR geçişi ('+pass.kind+', '+pass.scale+'×) çalışıyor…';
+      const result = await worker.recognize(canvas);
+      const words = (result.data.words||[]).filter(function(w){ return String(w.text||'').replace(/\D/g,''); });
+      for (const w of words){
+        for (const m of matchOcrToken(w.text, expected)){
+          const bb = w.bbox||{x0:0,y0:0,x1:0,y1:0};
+          const full = String(w.text||'').replace(/\D/g,'');
+          let x0=bb.x0, x1=bb.x1;
+          if (full.length>0 && m.end>m.start){
+            const width = bb.x1-bb.x0;
+            x0 = bb.x0 + width*m.start/full.length;
+            x1 = bb.x0 + width*m.end/full.length;
+          }
+          all.push({
+            hotspot: m.val, w:(x1-x0)/pass.scale, h:(bb.y1-bb.y0)/pass.scale,
+            cx:(x0+x1)/(2*pass.scale), cy:(bb.y0+bb.y1)/(2*pass.scale),
+            score: Math.max(0, Math.min(100, (Number(w.confidence)||0)*.65 + m.quality*.35)),
+          });
+        }
+      }
+    }
+  } finally { await worker.terminate(); }
+
+  const selected = [];
+  for (const val of expected){
+    const cand = all.filter(function(a){ return a.hotspot===val && a.w>3 && a.h>5 && a.w<ICN_IMAGE.naturalWidth*.35 && a.h<ICN_IMAGE.naturalHeight*.18; });
+    for (const c of cand){
+      const agreement = cand.filter(function(q){ return Math.abs(q.cx-c.cx)<18 && Math.abs(q.cy-c.cy)<14; }).length;
+      c.finalScore = c.score + agreement*12 - (c.w>120?15:0) - (c.h>70?15:0);
+    }
+    cand.sort(function(a,b){ return b.finalScore-a.finalScore; });
+    if (cand.length) selected.push(cand[0]);
+  }
+  let found = 0;
+  ICN_RECORDS.forEach(function(r){
+    const m = selected.find(function(s){ return s.hotspot===String(r.hotspot); });
+    if (m){ r.x = Math.round(m.cx); r.y = Math.round(m.cy); found++; }
+  });
+  renderIcnHotspotTable();
+  drawIcnCanvas();
+  statusEl.className = 'status-box '+(found===ICN_RECORDS.length ? 'status-ok' : 'status-warn');
+  statusEl.textContent = 'OCR tamamlandı: '+found+'/'+ICN_RECORDS.length+' hotspot otomatik bulundu.'+
+    (found<ICN_RECORDS.length ? ' Kalanları tablodan seçip görsele elle tıklayarak tamamlayın.' : '');
+}
+document.getElementById('icn-ocr-btn').addEventListener('click', function(){ icnDetectHotspotsOcr(); });
+
+</script>
+</body>
+</html>
