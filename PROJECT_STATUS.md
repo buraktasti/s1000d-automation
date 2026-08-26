@@ -45,3 +45,41 @@ etkilenmediği teyit edildi. Detay: `DECISIONS.md` D-001.
 ## Offline Çalışma
 Ana akış tamamen offline. Yalnızca Tesseract.js OCR özelliği ilk kullanımda
 internet gerektirir (CDN'den yükleniyor).
+
+## XSD DOĞRULAMA BASELINE (2026-08-26) — TAMAMLANDI ✅
+Kullanıcı tarafından resmi **S1000D Issue 5.0 XML Schema Package.zip** yüklendi
+ve gerçek `xmllint --schema` ile otomatik doğrulama çalıştırıldı (manuel
+karşılaştırma değil — gerçek validator, gerçek exit code, negatif kontrolle
+doğrulanmış kurulum).
+
+**Sonuç: 16/16 test PASS, 0 FAIL.**
+
+| Test | XML | XSD | Exit Code | Sonuç |
+|---|---|---|---:|---|
+| TEST-AUTO-XSD-01 | 040 descript (referans) | descript.xsd | 0 | PASS |
+| TEST-AUTO-XSD-02 | 420 fault (referans) | fault.xsd | 0 | PASS |
+| TEST-AUTO-XSD-03 | 520 proced (referans) | proced.xsd | 0 | PASS |
+| TEST-AUTO-XSD-04 | 941 ipd (referans) | ipd.xsd | 0 | PASS |
+| TEST-AUTO-XSD-05 | buildImfXml() canlı çıktısı | icnmetadata.xsd | 0 | PASS |
+| ek | genDescript/genProced/genIpd canlı çıktıları | ilgili XSD | 0 | PASS |
+| ek | genFault() 6 dalı (411/412/413/414/410/420) canlı çıktıları | fault.xsd | 0 | PASS |
+| ek | ICN enjekte edilmiş descript/ipd canlı çıktıları | ilgili XSD | 0 | PASS |
+
+**Yöntem notu:** `http://www.w3.org/2001/xml.xsd` bağımlılığı ağ erişimi
+olmadığı için yerel XML catalog ile çözüldü (W3C'nin standart, değişmemiş
+içeriği kullanıldı — S1000D paketi veya test edilen XML'ler değiştirilmedi).
+Kurulumun gerçekten çalıştığı, kasıtlı bozulmuş bir XML ile negatif kontrol
+yapılarak kanıtlandı (gerçek FAIL, exit code 3 alındı).
+
+**Bu baseline'dan sonraki oturumlar XSD tarafını yeniden analiz etmemeli** —
+XSD doğrulaması bu tarihte PASS olarak kabul edilmiştir. Yeni bir kod
+değişikliği (özellikle content/dmCode/ICN üretimiyle ilgili) yapılırsa XSD
+regresyon testi tekrar çalıştırılmalı.
+
+## BREX Doğrulama Durumu — HENÜZ BAŞLAMADI (hazırlık fazında)
+XSD doğrulamasından tamamen ayrı bir sonraki faz. Repo'da gerçek bir BREX Data
+Module (proje-özel iş kuralı XML'i) **bulunmuyor** — yalnızca `brex.xsd` şema
+dosyası var (bu, BREX dosyalarının *yapısını* tanımlar, kuralların kendisini
+içermez). Uygulamanın `brexDmRef`'i S1000D'nin genel/varsayılan BREX
+kimliğine (`S1000D-A-04-10-0301-00A-022A-D`) işaret ediyor, proje-özel BREX
+değil. Detay: bkz. sonraki BREX hazırlık raporu (sohbet geçmişi).

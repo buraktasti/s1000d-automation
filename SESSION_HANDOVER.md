@@ -1,52 +1,58 @@
 # SESSION_HANDOVER.md — Oturum Devir Teslimi
 
-## Bu Oturumda Yapılanlar (en son)
-1. Kullanıcı gerçek `Koluman_S1000D_Veri_Modulu_Uretici.html` dosyasını yükledi.
-2. Dosya doğrudan incelendi (`grep`/`view`), `row.malzKat+row.sysCode`
-   kullanımının tam olarak 2 yerde bulunduğu doğrulandı:
-   - `identAndStatus()` → `<dmCode systemCode="...">` (satır 848)
-   - `genIpd()` → `<catalogSeqNumber systemCode="...">` (satır 1071)
-3. Her iki satır da minimal şekilde düzeltildi:
-   - `identAndStatus()`: `row.malzKat+row.sysCode` → `sys` (fonksiyonda zaten
-     tanımlı olan `row.dmc.split('-')[2]`)
-   - `genIpd()`: `row.malzKat+row.sysCode` → `row.dmc.split('-')[2]` (satır
-     içi, yeni değişken eklenmedi)
-4. `diff` ile doğrulandı: dosyada **yalnızca bu 2 satır** değişti, satır
-   sayısı (1675) aynı kaldı, başka hiçbir fark yok.
-5. Gerçek dosyadan `<script>` bloğu çıkarılıp minimal bir DOM shim ile
-   Node.js'te çalıştırıldı; `parseDmcString`, `identAndStatus`, `genDescript`,
-   `genProced`, `genFault`, `genIpd` fonksiyonlarının **gerçek, değiştirilmiş
-   hâlleri** ile 7 test koşuldu:
-   - TEST-01 (tam DMC import): PASS
-   - TEST-02 (detay import, malzKat="H" tutarsız): PASS (önceden FAIL idi)
-   - TEST-03 (aynı tutarsız veriyle IPD): PASS, yan öznitelikler
-     (subSystemCode/subSubSystemCode/assyCode) bozulmadı
-   - TEST-04 (040 descript regresyon): PASS
-   - TEST-05 (420 fault regresyon): PASS
-   - TEST-06 (520 proced regresyon): PASS
-   - TEST-07 (941 ipd regresyon): PASS
-6. Düzeltilmiş dosya `/mnt/user-data/outputs/` altına kopyalanıp kullanıcıya
-   indirilebilir olarak sunuldu.
-7. `DECISIONS.md`, `TODO.md`, `PROJECT_STATUS.md` güncellendi — **T-001 ve
-   T-006 KAPATILDI**. `CLAUDE.md` kullanıcı talimatı gereği değiştirilmedi.
+## Bu Oturumda Yapılanlar (en son — XSD baseline + BREX hazırlık)
+1. Kullanıcı resmi **S1000D Issue 5.0 XML Schema Package.zip**'i yükledi.
+2. ZIP çıkarıldı, `xml_schema_flat/` altında hedef XSD'ler (descript, proced,
+   fault, ipd, icnmetadata, xlink, rdf, dc, brex, +diğerleri) doğrulandı.
+3. `http://www.w3.org/2001/xml.xsd` bağımlılığı (ağ kapalı olduğu için)
+   yerel XML catalog ile çözüldü — W3C'nin standart değişmemiş içeriği
+   kullanıldı, S1000D paketi/test XML'leri değiştirilmedi.
+4. **Gerçek `xmllint --schema` çalıştırıldı** (manuel karşılaştırma değil):
+   - 4 referans XML (040/420/520/941) + `buildImfXml()` canlı çıktısı → 5/5 PASS
+   - Ek olarak: genDescript/genProced/genIpd canlı çıktıları, genFault()'un
+     6 dalı (411/412/413/414/410/420), ICN enjekte edilmiş descript/ipd
+     çıktıları → hepsi PASS (toplam 16/16 test, 0 FAIL)
+   - Kurulumun gerçekten çalıştığı **negatif kontrolle** kanıtlandı (kasıtlı
+     bozulmuş XML → gerçek FAIL, exit code 3, "attribute systemCode required
+     but missing")
+5. Bu sonuç `PROJECT_STATUS.md`'ye **XSD DOĞRULAMA BASELINE** olarak işlendi.
+   **Bir sonraki oturumlar XSD tarafını yeniden analiz etmemeli.**
+6. `brex.xsd` incelendi — BREX'in yapısı (`brex > commonInfo/snsRules/
+   contextRules/nonContextRules`, `structureObjectRule > objectPath(
+   allowedObjectFlag)/objectUse/objectValue`, `brDecisionRef`) çıkarıldı.
+7. Repo'da **gerçek bir BREX Data Module (proje-özel iş kuralı XML'i)
+   bulunamadı** — yalnızca şema (brex.xsd) var, kural içeriği yok.
+8. Uygulamanın `identAndStatus()`/`brexAttrs()` fonksiyonu incelendi:
+   `brexDmRef`, `SETTINGS.brex` ayarından (varsayılan:
+   `S1000D-A-04-10-0301-00A-022A-D`) üretiliyor — bu, **S1000D'nin genel/
+   varsayılan BREX kimliği**, projeye özel bir BREX değil.
+9. BREX hazırlık analizi (A-F maddeleri) kullanıcıya sunuldu — henüz
+   validator kodu yazılmadı, kod değiştirilmedi.
+
+## ÖNEMLİ: XSD Fazı Kapandı, BREX Fazı Hazırlık Aşamasında
+- XSD doğrulaması: **TAMAMLANDI, PASS baseline kaydedildi.**
+- BREX doğrulaması: **Hazırlık aşamasında** — gerçek BREX kuralı doğrulaması
+  için proje-özel bir BREX Data Module gerekiyor, bu repo'da yok (bkz. BREX
+  hazırlık raporu, sohbet geçmişinde — bu dosyalara henüz eklenmedi, sonraki
+  oturumda BREX_READINESS.md gibi ayrı bir dosyaya taşınması düşünülebilir).
 
 ## Bu Oturumda YAPILMAYANLAR (kasıtlı)
-- Refactor yapılmadı — yalnızca 2 satır değişti, hiçbir fonksiyon yeniden
-  yapılandırılmadı.
-- UI'ye dokunulmadı.
-- `genIpd()`'deki `subSystemCode`/`subSubSystemCode`/`assyCode` gibi diğer
-  öznitelikler değiştirilmedi (talimat gereği).
-- Başka hiçbir bilinen risk/eksik (XSD/BREX doğrulama, eksik şema türleri,
-  ZWSP şüphesi) bu oturumda ele alınmadı.
+- Uygulama koduna hiç dokunulmadı.
+- BREX validator kodu yazılmadı.
+- Proje-özel BREX kuralları varsayılmadı/uydurulmadı — eksiklik açıkça
+  raporlandı.
 
-## Mevcut Açık Konular (bir sonraki oturum için)
-- XSD/BREX doğrulama katmanı hâlâ yok (bkz. `DECISIONS.md` D-004, `TODO.md` T-003).
-- Eksik şema türleri (`schedul`, `wrngdata`) hâlâ desteklenmiyor (bkz. `TODO.md` T-002).
-- ZWSP şüphesi hâlâ ham dosyada bayt-bazlı doğrulanmadı (D-002, kayıt dışı — istenirse artık gerçek dosya elimizde, doğrudan `view`/`grep` ile kontrol edilebilir).
-- ICN gömme yönteminin S1000D 5.0 uyumu hâlâ doğrulanmadı (T-004).
+## Bir Sonraki Oturum Nereden Başlamalı
+1. BREX doğrulaması için gerçek bir BREX Data Module gerekiyor — kullanıcıdan
+   ZKA projesine özel BREX XML'i (varsa) istenmeli.
+2. Yoksa: S1000D'nin genel/varsayılan BREX'i (`S1000D-A-04-10-0301-00A-022A-D`)
+   ile mi devam edilecek, yoksa proje-özel BREX mi yazılacak — karar
+   kullanıcıdan alınmalı.
+3. BREX Data Module elde edilirse, `structureObjectRule`/`objectPath`/
+   `allowedObjectFlag` kuralları çıkarılıp uygulamanın ürettiği XML'lere
+   karşı gerçek bir BREX/Schematron-tarzı doğrulama tasarlanabilir.
 
 ## Devir Teslim Kuralı (değişmedi)
-Bir bulgu ancak kaynak dosya üzerinde doğrudan doğrulanmışsa `DECISIONS.md`'ye
-"teknik risk" olarak yazılır ve çözüldüğünde gerçek dosyada test edilip
-kapatılır. Bu oturumda T-001/T-006 bu şekilde uçtan uca (kod incelemesi →
-düzeltme → gerçek dosyada test → kapatma) tamamlandı.
+XSD ve BREX doğrulamaları birbirinden kesin çizgilerle ayrı tutulur. XSD
+"yapı geçerli mi" sorusuna, BREX "projenin iş kurallarına uygun mu" sorusuna
+cevap verir. Biri PASS olması diğerinin de PASS olduğu anlamına gelmez.
