@@ -7,28 +7,39 @@ Gereken Noktalar".
 
 ---
 
-## D-001 — systemCode üretim tutarsızlığı (AÇIK, ÖNCELİKLİ TEKNİK RİSK)
+## D-001 — systemCode üretim tutarsızlığı (ÇÖZÜLDÜ ✅)
 
-**Durum:** Doğrulandı, çözülmedi.
+**Durum:** Çözüldü ve gerçek repo dosyasında doğrulandı. Kapatıldı.
 
-**Sorun:** `identAndStatus()` fonksiyonu içinde DMC'nin `systemCode` özniteliği
-iki farklı içe aktarma yolunda farklı kaynaklardan üretiliyor:
+**Sorun (kök neden):** İki ayrı yerde `systemCode`, `row.dmc`'nin 3. segmenti
+yerine ayrı saklanan `row.malzKat + row.sysCode` alanlarından üretiliyordu:
+1. `identAndStatus()` içindeki `<dmCode systemCode="...">`
+2. `genIpd()` içindeki `<catalogSeqNumber systemCode="...">`
 
-- **Tam-DMC-parse yolu:** `parseDmcString()` fonksiyonu, yapıştırılan/CSV'den
-  gelen tam DMC string'ini regex ile ayrıştırırken `systemCode` değerini
-  doğrudan DMC'nin 3. segmentinden (`parts[2]`) alır.
-- **Detay-sütun-import yolu:** `identAndStatus()` fonksiyonu XML üretirken
-  `row.malzKat + row.sysCode` (iki ayrı Excel sütununun birleşimi) kullanır.
+Her iki fonksiyondaki diğer tüm konum öznitelikleri (`subSystemCode`,
+`subSubSystemCode`, `assyCode`, `disassyCode`, `disassyCodeVariant`) zaten
+`row.dmc.split('-')`'den (tek kaynak) türetiliyordu. Detay-sütun-import
+yolunda Excel'in "Tam DMC" sütunu ile ayrı "Malzeme Kategori Kodu"/"Sistem
+Kodu" sütunları birbiriyle tutarsızsa, bu iki nokta `dmc` string'iyle çelişen
+bir `systemCode` üretebiliyordu.
 
-**Risk:** Aynı satır için bu iki yol farklı `systemCode` değeri üretebilir;
-detay-sütun-import yolunda `malzKat`/`sysCode` alanları boş/eksikse
-(`undefined` birleşimi gibi) `dmCode` malformed olabilir.
+**Uygulanan düzeltme (gerçek dosyada, satır bazlı, minimal):**
+1. `identAndStatus()`: `systemCode="'+xmlEscape(row.malzKat+row.sysCode)+'"` → `systemCode="'+xmlEscape(sys)+'"` (`sys` fonksiyonda zaten `row.dmc.split('-')[2]` olarak tanımlıydı, yeni değişken eklenmedi).
+2. `genIpd()`: `systemCode="'+xmlEscape(row.malzKat+row.sysCode)+'"` → `systemCode="'+xmlEscape(row.dmc.split('-')[2])+'"` (satır içi, yeni değişken eklenmedi; `subSystemCode`/`subSubSystemCode`/`assyCode` gibi diğer öznitelikler dokunulmadan bırakıldı).
 
-**Karar:** Bu konu koda dokunulmadan önce test edilecek — iki import yolundan
-aynı bileşen için üretilen `dmCode`'lar karşılaştırılmalı.
+Diff ile doğrulandı: dosyada yalnızca bu 2 satır değişti (1675 satır → 1675 satır, yapısal fark yok).
 
-**Sahiplik:** Bir sonraki geliştirme oturumu, kod değişikliğinden önce bunu
-doğrulamalı (bkz. `TODO.md` T-001).
+**Test sonuçları (gerçek dosyadan çıkarılan fonksiyonlarla, Node.js'te çalıştırıldı):**
+- TEST-01 (tam DMC import, descript): PASS — systemCode=GA1
+- TEST-02 (detay import, malzKat="H" tutarsız): PASS — systemCode=GA1 (önceden FAIL idi, "HA1" üretiyordu)
+- TEST-03 (aynı tutarsız veriyle IPD): PASS — catalogSeqNumber systemCode=GA1, diğer öznitelikler (subSystemCode=1, subSubSystemCode=1, assyCode=0001) bozulmadı
+- TEST-04 (040 descript regresyon): PASS
+- TEST-05 (420 fault regresyon): PASS
+- TEST-06 (520 proced regresyon): PASS
+- TEST-07 (941 ipd regresyon): PASS
+
+**Sonuç:** `systemCode` artık her iki üretim noktasında da tek gerçek kaynak
+(`row.dmc`) kullanıyor. Risk giderildi.
 
 ---
 

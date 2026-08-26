@@ -845,7 +845,7 @@ function identAndStatus(row, infoName){
   return '  <identAndStatusSection>\n' +
     '    <dmAddress>\n' +
     '      <dmIdent>\n' +
-    '        <dmCode modelIdentCode="'+xmlEscape(row.mic)+'" systemDiffCode="'+xmlEscape(row.sdc)+'" systemCode="'+xmlEscape(row.malzKat+row.sysCode)+'"\n' +
+    '        <dmCode modelIdentCode="'+xmlEscape(row.mic)+'" systemDiffCode="'+xmlEscape(row.sdc)+'" systemCode="'+xmlEscape(sys)+'"\n' +
     '                subSystemCode="'+xmlEscape(subSys)+'" subSubSystemCode="'+xmlEscape(subSubSys)+'" assyCode="'+xmlEscape(bilesen)+'"\n' +
     '                disassyCode="'+xmlEscape(disassy)+'" disassyCodeVariant="'+xmlEscape(disassyVar)+'"\n' +
     '                infoCode="'+xmlEscape(row.infoCode)+'" infoCodeVariant="'+xmlEscape(infoVar)+'" itemLocationCode="'+xmlEscape(row.kkk)+'" />\n' +
@@ -1068,7 +1068,7 @@ function genFault(row){
 function genIpd(row){
   const content = '  <content>\n' +
     '    <illustratedPartsCatalog>\n' +
-    '      <catalogSeqNumber indenture="1" systemCode="'+xmlEscape(row.malzKat+row.sysCode)+'" subSystemCode="'+xmlEscape(row.altAltSis.charAt(0))+'"\n' +
+    '      <catalogSeqNumber indenture="1" systemCode="'+xmlEscape(row.dmc.split('-')[2])+'" subSystemCode="'+xmlEscape(row.altAltSis.charAt(0))+'"\n' +
     '                        subSubSystemCode="'+xmlEscape(row.altAltSis.charAt(1))+'" assyCode="'+xmlEscape(row.bilesen)+'" figureNumber="01" item="000">\n' +
     '        <itemSeqNumber itemSeqNumberValue="00A">\n' +
     '          <reasonForSelection reasonForSelectionValue="0" />\n' +

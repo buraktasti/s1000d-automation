@@ -4,16 +4,15 @@
 yazılmıştır. Koda dokunmadan önce `DECISIONS.md` ile çelişki olup olmadığı
 kontrol edilmeli.
 
-## T-001 — [ÖNCELİKLİ] systemCode üretim tutarlılığını test et
-- Aynı bileşen için hem tam-DMC yapıştırma hem detay-sütun-import yollarını
-  çalıştır, üretilen `dmCode`'un `systemCode` özniteliğini karşılaştır.
-- `identAndStatus()` fonksiyonundaki `row.malzKat + row.sysCode` mantığının
-  tam-DMC-import satırlarında `malzKat`/`sysCode` alanları dolu mu, boş mu
-  geldiğini doğrula.
-- Sonuca göre: ya `identAndStatus()` her iki yol için de `parseDmcString()`
-  çıktısını tek kaynak olarak kullanacak şekilde düzeltilmeli, ya da iki yolun
-  neden farklı olduğu belgelenmeli (kasıtlıysa).
-- Bkz. `DECISIONS.md` D-001.
+## T-001 — [KAPATILDI ✅] systemCode üretim tutarlılığı
+- Gerçek `Koluman_S1000D_Veri_Modulu_Uretici.html` dosyasında iki nokta
+  düzeltildi: `identAndStatus()` ve `genIpd()`.
+- 7 test (TEST-01→07) gerçek dosyadan çıkarılan fonksiyonlarla çalıştırıldı,
+  tümü PASS. Diff ile yalnızca 2 satırın değiştiği doğrulandı.
+- Detay: `DECISIONS.md` D-001.
+
+## T-006 — [KAPATILDI ✅] genIpd() içindeki bağımsız systemCode kullanımı
+- T-001 ile birlikte aynı oturumda düzeltildi (bkz. yukarısı ve `DECISIONS.md` D-001).
 
 ## T-002 — Eksik şema türlerini önceliklendir ve ekle
 - Öncelik: `schedul` (bakım planlama/PMCS) — ZKA metodolojisinde sabit "05"

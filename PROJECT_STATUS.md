@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Mevcut Durum
 
-Son güncelleme: 2026-08-26 (proje devralma analizi sonrası)
+Son güncelleme: 2026-08-26 (T-001/T-006 düzeltmesi gerçek dosyada uygulandı ve doğrulandı)
 
 ## Genel Durum
 Uygulama çalışır durumda ve 4 temel S1000D şema türü için XML üretebiliyor.
@@ -30,9 +30,17 @@ Kod tabanı henüz bu oturumda **değiştirilmedi** — bu dosyalar yalnızca an
 - [ ] Gerçek teknik içerik üretimi — mevcut içerik gövdeleri (descript/proced/fault) placeholder/iskelet niteliğinde, Content Rehberi'nde tarif edilen çok-seviyeli/illüstrasyonlu yapıyı yansıtmıyor
 
 ## Doğrulanmamış / İncelenmesi Gereken Noktalar
-- `systemCode` üretim tutarlılığı (tam-DMC-parse vs detay-sütun-import) — bkz. `DECISIONS.md` madde D-001
 - ICN gömme yönteminin (DOCTYPE ENTITY/NDATA) güncel S1000D 5.0 object/graphic modeliyle uyumu
-- ZWSP (zero-width space) şüphesi — ham kaynak dosyada doğrulanmadı, risk olarak kayıtlı değil
+- ZWSP (zero-width space) şüphesi — ham kaynak dosyada doğrulanmadı, risk olarak kayıtlı değil (bkz. D-002)
+
+## T-001 / T-006 Durumu (KAPATILDI ✅)
+`systemCode` üretim tutarsızlığı iki noktada (`identAndStatus()` ve
+`genIpd()`) gerçek dosyada düzeltildi ve 7 testle (TEST-01→07) doğrulandı,
+tümü PASS. Diff ile yalnızca 2 satırın değiştiği, başka hiçbir davranışın
+etkilenmediği teyit edildi. Detay: `DECISIONS.md` D-001.
+
+## Güncellenmiş Tamamlanmış Bileşenler Listesine Ek
+- [x] `systemCode` üretimi artık her iki üretim noktasında da (`identAndStatus()`, `genIpd()`) tek kaynak olan `row.dmc`'den türetiliyor.
 
 ## Offline Çalışma
 Ana akış tamamen offline. Yalnızca Tesseract.js OCR özelliği ilk kullanımda
