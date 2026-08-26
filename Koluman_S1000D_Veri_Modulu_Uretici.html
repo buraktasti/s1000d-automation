@@ -424,6 +424,16 @@ function parseDmcString(dmc){
   return {mic:m[1], sdc:m[2], sysCode:m[3], altAltSis:m[4], bilesen:m[5], sokum:m[6], infoCode:m[7], infoVar:m[8], kkk:m[9]};
 }
 function looksLikeDmc(s){ return DMC_RE.test(String(s||'').trim()); }
+// Proje kuralı (DERMAN/FORSDOC): assyCode tam 4 karakter, disassyCode+disassyCodeVariant (sokum) toplam 4 karakter
+// (disassyCode sabit 2 + disassyCodeVariant 2) olmalıdır. Bu, S1000D XSD karakter kümesini gevşetmez,
+// yalnızca DMC_RE'nin zaten kabul ettiği karakterler üzerinde ek bir uzunluk kısıtı uygular.
+function dmcLengthError(raw){
+  const bilesen = String(raw.bilesen||'');
+  const sokum = String(raw.sokum||'');
+  if (bilesen.length !== 4) return 'assyCode ("'+bilesen+'") 4 karakter olmalı (bulunan: '+bilesen.length+')';
+  if (sokum.length !== 4) return 'disassyCode+disassyCodeVariant ("'+sokum+'") toplam 4 karakter olmalı, disassyCode 2 + disassyCodeVariant 2 (bulunan: '+sokum.length+')';
+  return null;
+}
 
 let DATA_ROWS = [];
 let TREE = null;
@@ -471,7 +481,7 @@ function buildImfXml(icn){
   located.forEach(function(r){
     objs.push('<icnObject icnObjectIdent="hot'+String(r.hotspot).padStart(3,'0')+'" icnObjectName="'+xmlEscape(r.hotspot)+'" icnObjectTitle="'+xmlEscape(r.partName||r.description||'')+'" objectCoordinates="'+imfObjectCoordinates(icn, r)+'" />');
   });
-  return '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE icnMetadataFile []>\n<icnMetadataFile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_5-0/xml_schema_flat/icnMetadata.xsd">' +
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE icnMetadataFile []>\n<icnMetadataFile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_5-0/xml_schema_flat/icnmetadata.xsd">' +
     '<imfIdentAndStatusSection><imfAddress><imfIdent><imfCode imfIdentIcn="'+xmlEscape(icn.code)+'" /><issueInfo issueNumber="'+SETTINGS.issue+'" inWork="00" /></imfIdent>' +
     '<imfAddressItems><icnTitle>'+xmlEscape(icn.title||icn.code)+'</icnTitle></imfAddressItems></imfAddress>' +
     '<imfStatus><security securityClassification="01" /><responsiblePartnerCompany enterpriseCode="'+xmlEscape(SETTINGS.cage)+'"><enterpriseName>'+xmlEscape(SETTINGS.org)+'</enterpriseName></responsiblePartnerCompany>' +
@@ -517,6 +527,10 @@ function importText(text, encodingNote){
 
   const rows = [];
   let skipped = 0;
+  let lengthSkipped = 0;
+  const lengthErrorSamples = [];
+  let infoCodeMismatchCount = 0;
+  const infoCodeMismatchSamples = [];
   for (let ri=0; ri<effRows.length; ri++){
     const r = effRows[ri];
     let raw = {};
@@ -539,7 +553,7 @@ function importText(text, encodingNote){
     } else {
       const get = function(key){ return colIndex[key]!==undefined ? (r[colIndex[key]]||'') : ''; };
       let dmc = get('dmc');
-      let infoCode = get('infoCode');
+      const excelInfoCode = get('infoCode');
       if (!dmc && get('mic')){
         const mic=get('mic')||SETTINGS.mic, sdc=get('sdc')||SETTINGS.sdc;
         const sys=(get('malzKat')+get('sysCode'))||'';
@@ -547,7 +561,14 @@ function importText(text, encodingNote){
       }
       if (!dmc || !looksLikeDmc(dmc)){ skipped++; continue; }
       const p = parseDmcString(dmc);
-      if (!infoCode) infoCode = p.infoCode;
+      // infoCode için birincil ve güvenilir kaynak her zaman geçerli DMC'nin kendisidir (p.infoCode,
+      // DMC_RE tarafından zorunlu 3 karakter olarak eşleştirilir). Excel'deki ayrı infoCode sütunu
+      // XML üretiminde KULLANILMAZ; yalnızca DMC ile tutarsızsa kullanıcıyı uyarmak için okunur.
+      const infoCode = p.infoCode;
+      if (excelInfoCode && excelInfoCode !== infoCode){
+        infoCodeMismatchCount++;
+        if (infoCodeMismatchSamples.length < 5) infoCodeMismatchSamples.push('DMC "'+dmc.trim()+'": Excel infoCode="'+excelInfoCode+'" görmezden gelindi, DMC\'den türetilen infoCode="'+infoCode+'" kullanıldı');
+      }
       raw = {
         dmc: dmc.trim(),
         sns: get('sns') || (p.sysCode+'-'+p.altAltSis+'-'+p.bilesen),
@@ -567,12 +588,27 @@ function importText(text, encodingNote){
         sokum: get('sokum') || p.sokum,
       };
     }
+    const lenErr = dmcLengthError(raw);
+    if (lenErr){
+      lengthSkipped++;
+      if (lengthErrorSamples.length < 5) lengthErrorSamples.push('DMC "'+raw.dmc+'": '+lenErr);
+      continue;
+    }
     rows.push(raw);
   }
 
   if (!rows.length){
     statusEl.className='status-box status-err';
-    statusEl.textContent='Hiçbir satır işlenemedi. "DMC Detay (Tum InfoCode)" sayfasının başlık satırıyla birlikte kopyalandığından veya geçerli DMC kodları içerdiğinden emin olun. (Not: Dosya yükleme artık UTF-8 ve Türkçe Windows (Windows-1254) kodlamalarını otomatik algılar; sorun devam ederse doğrudan kopyala-yapıştır yöntemini deneyin.)';
+    let msg = 'Hiçbir satır işlenemedi. "DMC Detay (Tum InfoCode)" sayfasının başlık satırıyla birlikte kopyalandığından veya geçerli DMC kodları içerdiğinden emin olun. (Not: Dosya yükleme artık UTF-8 ve Türkçe Windows (Windows-1254) kodlamalarını otomatik algılar; sorun devam ederse doğrudan kopyala-yapıştır yöntemini deneyin.)';
+    if (lengthSkipped){
+      msg += ' '+lengthSkipped+' satır proje uzunluk kuralı nedeniyle atlandı (assyCode 4 karakter / disassyCode+disassyCodeVariant toplam 4 karakter olmalı).';
+      if (lengthErrorSamples.length) msg += ' Örnekler: '+lengthErrorSamples.join(' | ');
+    }
+    if (infoCodeMismatchCount){
+      msg += ' '+infoCodeMismatchCount+' satırda Excel infoCode sütunu, DMC\'den türetilen infoCode ile uyuşmuyordu; DMC değeri esas alındı.';
+      if (infoCodeMismatchSamples.length) msg += ' Örnekler: '+infoCodeMismatchSamples.join(' | ');
+    }
+    statusEl.textContent = msg;
     return;
   }
 
@@ -584,13 +620,15 @@ function importText(text, encodingNote){
   renderTable();
 
   const encSuffix = encodingNote ? (' [Kodlama: '+encodingNote+']') : '';
+  const lenSuffix = lengthSkipped ? (' '+lengthSkipped+' satır proje uzunluk kuralı nedeniyle atlandı (assyCode 4 karakter / disassyCode+disassyCodeVariant toplam 4 karakter olmalı).'+(lengthErrorSamples.length?(' Örnekler: '+lengthErrorSamples.join(' | ')):'')) : '';
+  const infoCodeSuffix = infoCodeMismatchCount ? (' '+infoCodeMismatchCount+' satırda Excel infoCode sütunu DMC ile uyuşmuyordu; DMC değeri esas alındı.'+(infoCodeMismatchSamples.length?(' Örnekler: '+infoCodeMismatchSamples.join(' | ')):'')) : '';
   if (mode==='dmc-only'){
     statusEl.className='status-box status-warn';
     statusEl.textContent = rows.length + ' satır DMC koduna göre içe aktarıldı (başlık/kategori bilgisi yok, sadece DMC\'den türetildi).' +
-      (skipped? (' '+skipped+' satır tanınamadı.'):'') + encSuffix;
+      (skipped? (' '+skipped+' satır tanınamadı.'):'') + lenSuffix + infoCodeSuffix + encSuffix;
   } else {
     statusEl.className='status-box status-ok';
-    statusEl.textContent = rows.length + ' satır başarıyla içe aktarıldı.' + (skipped? (' '+skipped+' satır atlandı (geçersiz DMC).'):'') + encSuffix;
+    statusEl.textContent = rows.length + ' satır başarıyla içe aktarıldı.' + (skipped? (' '+skipped+' satır atlandı (geçersiz DMC).'):'') + lenSuffix + infoCodeSuffix + encSuffix;
   }
 }
 
