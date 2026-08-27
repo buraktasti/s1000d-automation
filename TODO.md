@@ -46,39 +46,19 @@ kontrol edilmeli.
   yeniden test edilmeli.
 - Detay: `DECISIONS.md` D-011.
 
-## T-016 — [YENİ — KULLANICI FORSDOC'TA YENİDEN TEST ETMELİ] FAZ 2: MIC bazlı ICN + VM hotspot/legend gömme + SNS eşleştirme
-- **Kaynak:** Üç Faz 1 analiz turunda toplanan gerçek FORSDOC export
-  verisi (Temel Motor + Egzoz Sistemi ICN/VM çiftleri) ve resmi "Bilgi
-  Kontrol Numarası" eğitim materyali.
-- **Uygulanan 3 değişiklik:**
-  1. MIC bazlı ICN üretimi (`nextIcnCodeMic()`) — Firma Kodlu üretim
-     (`nextIcnCode()`) hiç bozulmadan, UI'da radyo seçimiyle eklendi.
-  2. VM `<graphic>` içine `<hotspot>` + `<legend>` gömme
-     (`figureBlock()` yeniden yazıldı) — IMF ile VM hotspot verisi artık
-     `computeIcnHotspotObjects()` üzerinden ortak kaynaktan geliyor.
-  3. SNS hiyerarşik eşleştirme fonksiyonu (`icnBelongsToSnsNode`) ve
-     `ICN_LIBRARY` veri modeli genişletmesi (`systemCode/subSystemCode/
-     subSubSystemCode/assyCode` + hesaplanmış anahtarlar).
-- **Test sonuçları:** 52/52 dahili test PASS (bkz. `DECISIONS.md` D-016).
-  Gerçek Egzoz Sistemi VM+ICN çiftiyle uçtan uca üretim, gerçek FORSDOC
-  dosyasıyla yapısal olarak karşılaştırıldı.
-- **Neden hâlâ açık / kullanıcıdan beklenenler:**
-  1. **FORSDOC'ta gerçek import testi yapılmadı** — kullanıcının bu
-     düzeltmeyle üretilmiş yeni paketleri (hem Firma Kodlu hem MIC bazlı)
-     FORSDOC'a yükleyip sonucu bildirmesi gerekiyor.
-  2. **"A" placeholder'ının (sorumlu firma kodu/varyant) DERMAN için
-     doğruluğu** hâlâ DOĞRULANAMADI — yalnızca gözlemlenen sabit değer
-     kullanıldı.
-  3. **SNS ağacında "ICN kütüphanesi tarayıcısı" ekranı henüz yok** —
-     `icnBelongsToSnsNode()` fonksiyonu hazır ama hiçbir UI ekranına
-     bağlanmadı (spekülatif özellik icat etmemek için bilinçli olarak
-     bu turda eklenmedi). Kullanıcı bu ekranın tam olarak nasıl
-     görüneceğine karar verirse eklenebilir.
-  4. Sistem/Alt Sistem seviyelerinde gerçek VM/ICN örneği hâlâ yok —
-     yalnızca "Alt Alt Sistem" seviyesi (assyCode="0000") gerçek veriyle
-     kanıtlı.
+## T-016 — [KAPATILDI ✅ — GERÇEK FORSDOC İLE DOĞRULANDI, bkz. D-017] FAZ 2: MIC bazlı ICN + VM hotspot/legend gömme + SNS eşleştirme
+- Kullanıcı, bizim ürettiğimiz bir VM'i FORSDOC'a yükleyip geri export
+  ettiği dosyayı ve FORIPS PDF çıktısını paylaştı. Bayt-seviyesi
+  karşılaştırma: TÜM hotspot/legend/ICN içeriği birebir aynı, yalnızca
+  FORSDOC'un kendi normalizasyon farkları (DOCTYPE, inWork, opsiyonel
+  securityClassification) var. Detay: `DECISIONS.md` D-017.
+- Kalan açık nokta: SNS ağacında "ICN kütüphanesi tarayıcısı" ekranı hâlâ
+  yok (bilinçli olarak eklenmedi, kullanıcı isterse ayrıca talep etmeli).
+- "A" placeholder'ının (sorumlu firma kodu/varyant) doğruluğu da bu
+  gerçek testle dolaylı doğrulandı (FORSDOC hiçbir hata vermeden kabul
+  etti).
 
-## T-015 — [YENİ — KULLANICI FORSDOC'TA YENİDEN TEST ETMELİ] ICN'de etkin noktalar (hotspot) görünmüyordu — imfIdentIcn "ICN-" ön eki hatası
+## T-015 — [KAPATILDI ✅ — GERÇEK FORSDOC İLE DOĞRULANDI, bkz. D-017] ICN'de etkin noktalar (hotspot) görünmüyordu — imfIdentIcn "ICN-" ön eki hatası
 - **Kaynak:** D-014 sonrası VM+ICN FORSDOC'a başarıyla yüklendi, ama
   ICN'deki etkin noktalar görünmüyordu. Kullanıcı, RPK Builder
   Professional V16.3 ile üretip FORSDOC'a etkin noktalarıyla birlikte

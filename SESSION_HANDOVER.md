@@ -1,5 +1,40 @@
 # SESSION_HANDOVER.md — Oturum Devir Teslimi
 
+## ALTINCI TUR — FAZ 2 GERÇEK FORSDOC İLE DOĞRULANDI ✅ (D-017)
+
+Kullanıcı, bizim ürettiğimiz bir VM'i (`Yağlama Donanımı`,
+`GA1-15-0000`, MIC bazlı ICN `ICN-M0117-AAA-GA1150000-A-TH743-00001-A-
+001-01` ile) FORSDOC'a başarıyla yükledi ve şunları paylaştı:
+1. Bizim ürettiğimiz VM (`DMC-...040A-A_001-00...XML`)
+2. FORSDOC'un bu VM'i geri export ettiği hali (`M0117-AAA-GA1-15-...xml`)
+3. FORSDOC/FORIPS PDF yayın çıktısı
+4. MSB İş Kuralları Excel'i (destekleyici referans)
+
+**Program aracılığıyla bayt-seviyesi karşılaştırma yapıldı:** İki dosya
+arasındaki TÜM hotspot/legend/dmCode/ICN referansı içeriği **birebir
+aynı** çıktı. Yalnızca FORSDOC'un kendi normalizasyon farkları var
+(DOCTYPE/ENTITY temizleme, inWork revizyon artışı, opsiyonel
+`securityClassification` eklenmesi — MSB İş Kuralları C16 ile bu son
+farkın koşullu/opsiyonel olduğu teyit edildi).
+
+**Sonuç:** Faz 2'de uygulanan D-014, D-015, D-016 (MIC bazlı ICN, VM
+hotspot/legend gömme, xsi:noNamespaceSchemaLocation, imfIdentIcn ön eki)
+artık yalnızca dahili Node.js testleriyle değil, **gerçek FORSDOC
+import + export + PDF yayın zinciriyle uçtan uca doğrulanmıştır.**
+`TODO.md` T-015 ve T-016 **KAPATILDI.** Bu turda **hiçbir kod değişikliği
+yapılmadı** — yalnızca doğrulama ve hafıza dosyası güncellemesi.
+
+**Kalan açık noktalar (değişmedi):**
+- SNS ağacında "ICN kütüphanesi tarayıcısı" ekranı hâlâ yok (bilinçli
+  olarak eklenmedi).
+- Sistem/Alt Sistem seviyelerinde gerçek VM/ICN örneği hâlâ yok, yalnızca
+  "Alt Alt Sistem" seviyesi kanıtlı.
+- "A" placeholder'ının (sorumlu firma kodu/varyant) DERMAN için tam
+  gerekçesi hâlâ DOĞRULANAMADI (ama gerçek FORSDOC kabul testiyle dolaylı
+  olarak sorunsuz olduğu görüldü).
+
+---
+
 ## BEŞİNCİ TUR / FAZ 2 (yeni analiz turlarının ardından kod değişikliği uygulandı)
 
 **Önceki 3 alt-tur (Faz 1 x3, kod değişikliği YAPILMADI, yalnızca analiz):**

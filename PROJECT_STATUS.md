@@ -1,13 +1,22 @@
 # PROJECT_STATUS.md — Mevcut Durum
 
-Son güncelleme: 2026-08-27 (BEŞİNCİ TUR / FAZ 2 — MIC bazlı ICN üretimi,
-VM içinde hotspot/legend gömme (Problem 2 kök nedeni giderildi) ve SNS
-hiyerarşik eşleştirme altyapısı D-016 ile uygulandı. İki bağımsız gerçek
-FORSDOC export paketi + resmi "Bilgi Kontrol Numarası" eğitim materyaliyle
-çapraz doğrulandı. 52/52 dahili test PASS. FORSDOC'ta gerçek import testi
-BEKLİYOR.)
+Son güncelleme: 2026-08-27 (ALTINCI TUR — FAZ 2 GERÇEK FORSDOC İLE
+DOĞRULANDI ✅: kullanıcı, ürettiğimiz bir VM'i FORSDOC'a başarıyla
+yükledi; FORSDOC'un geri export ettiği dosyayla bayt-seviyesi
+karşılaştırma yapıldı, TÜM hotspot/legend/ICN içeriği birebir aynı çıktı.
+D-014/D-015/D-016 artık gerçek FORSDOC zinciriyle doğrulanmıştır — bkz.
+D-017. T-015/T-016 KAPATILDI. Bu turda kod değişikliği yapılmadı.)
 
-## Genel Durum (BEŞİNCİ TUR / FAZ 2 — bu mesajlaşmada)
+## Genel Durum (ALTINCI TUR — bu mesajlaşmada)
+Kullanıcı FAZ 2 (D-016) sonrası ürettiği bir VM+ICN paketini FORSDOC'a
+yükledi ve **başarıyla kabul edildiğini** doğruladı — hem VM'de hotspot'lar
+hem MIC bazlı ICN hem de FORIPS PDF yayın çıktısında görünen etkin
+noktalar sorunsuz çalışıyor. Program aracılığıyla yapılan bayt-seviyesi
+karşılaştırma, bizim ürettiğimiz dosya ile FORSDOC'un geri export ettiği
+dosyanın **tüm teknik içerik açısından birebir aynı** olduğunu kanıtladı.
+Detay: `DECISIONS.md` D-017.
+
+## Genel Durum (BEŞİNCİ TUR / FAZ 2 — önceki mesajlaşmada)
 Üç ayrı analiz turunda (Faz 1 x3) toplanan gerçek FORSDOC export verisi ve
 kullanıcının onayladığı proje-özel iş kuralları ışığında Faz 2 kod
 değişiklikleri uygulandı:

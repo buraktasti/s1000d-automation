@@ -7,6 +7,46 @@ Gereken Noktalar".
 
 ---
 
+## D-017 — FAZ 2 DOĞRULANDI ✅: FORSDOC round-trip export ile bayt-seviyesi karşılaştırma — D-016 (MIC bazlı ICN + VM hotspot/legend) gerçek FORSDOC'ta çalışıyor
+
+**Durum:** Kullanıcı, bizim uygulamamızın ürettiği bir VM'i (`Yağlama
+Donanımı`, `M0117-AAA-GA1-15-0000-00AA-040A-A`, MIC bazlı ICN
+`ICN-M0117-AAA-GA1150000-A-TH743-00001-A-001-01` ile) FORSDOC'a
+yükledikten sonra FORSDOC'un bu VM'i **geri export ettiği** dosyayı ve
+üretilen **FORIPS PDF** çıktısını paylaştı.
+
+**Yapılan karşılaştırma:** Bizim ürettiğimiz `DMC-M0117-AAA-GA1-15-0000-
+00AA-040A-A_001-00_TR-TR.XML` ile FORSDOC'un export ettiği
+`M0117-AAA-GA1-15-0000-00AA-040A-A.xml`, whitespace/biçim farkları
+normalize edilerek program aracılığıyla **karakter karakter** karşılaştırıldı.
+
+**Sonuç: TÜM içerik (dmCode, 22 hotspot — D-013'ün "hot174"/"hot174b"
+yinelenen-numara çözümü dahil —, legend, koordinatlar, MIC bazlı ICN
+referansı) BİREBİR AYNI.** Yalnızca 3 önemsiz/beklenen fark bulundu:
+1. `<!DOCTYPE dmodule []>` — FORSDOC kendi export'unda ENTITY tanımını
+   siliyor (medyayı kendi içinde yönettiği için; import gereksinimini
+   etkilemiyor).
+2. `inWork="00"` → `"01"` — FORSDOC'un kendi revizyon sayacı (normal).
+3. `<levelledPara>` → `<levelledPara securityClassification="01">` —
+   FORSDOC'un eklediği bir öznitelik. MSB İş Kuralları Excel'inin C16
+   hücresi bunun **koşullu/opsiyonel** olduğunu doğruluyor ("...gizlilik
+   derecesine sahipse... kullanılır"); bizim dosyamız bu öznitelik
+   olmadan zaten sorunsuz kabul edildi, bu yüzden **eksiklik değil.**
+
+**Ek doğrulama:** Kullanıcının paylaştığı FORIPS PDF çıktısında (Şekil 1,
+"Resim Açıklaması" listesi), üretilen tüm 22 hotspot etiketi (0, 30, 35,
+40, 50, 60, 100, 120, 130, 140, 170, 172, 173, 174, 174, 175, 180, 190,
+270, 280, 290, 300) doğru sırada ve doğru başlıklarla görünüyor —
+D-016'nın görsel/yayın çıktısında da doğru çalıştığının kanıtı.
+
+**Sonuç:** D-014 (xsi:noNamespaceSchemaLocation), D-015 (imfIdentIcn ön
+eksiz), D-016 (MIC bazlı ICN + VM hotspot/legend gömme) **artık yalnızca
+dahili testlerle değil, gerçek FORSDOC import + export + PDF yayın
+zinciriyle uçtan uca doğrulanmıştır.** `TODO.md` T-015/T-016'daki "kullanıcı
+FORSDOC'ta yeniden test etsin" bekleme durumu **KAPATILDI.**
+
+---
+
 ## D-016 — FAZ 2: MIC bazlı (Model Tanımlama Kodlu) ICN üretimi + VM hotspot/legend gömme + SNS hiyerarşik eşleştirme (UYGULANDI ✅ — gerçek FORSDOC verisiyle test edildi; FORSDOC'ta yeniden import testi bekliyor)
 
 **Durum:** İki ayrı gerçek FORSDOC export paketi (Temel Motor/GA1-18-0000 ve
