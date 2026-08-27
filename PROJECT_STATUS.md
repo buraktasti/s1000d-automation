@@ -1,6 +1,47 @@
 # PROJECT_STATUS.md — Mevcut Durum
 
-Son güncelleme: 2026-08-26 (ÜÇÜNCÜ TUR — kullanıcının FORSDOC'a daha önce
+Son güncelleme: 2026-08-27 (BEŞİNCİ TUR / FAZ 2 — MIC bazlı ICN üretimi,
+VM içinde hotspot/legend gömme (Problem 2 kök nedeni giderildi) ve SNS
+hiyerarşik eşleştirme altyapısı D-016 ile uygulandı. İki bağımsız gerçek
+FORSDOC export paketi + resmi "Bilgi Kontrol Numarası" eğitim materyaliyle
+çapraz doğrulandı. 52/52 dahili test PASS. FORSDOC'ta gerçek import testi
+BEKLİYOR.)
+
+## Genel Durum (BEŞİNCİ TUR / FAZ 2 — bu mesajlaşmada)
+Üç ayrı analiz turunda (Faz 1 x3) toplanan gerçek FORSDOC export verisi ve
+kullanıcının onayladığı proje-özel iş kuralları ışığında Faz 2 kod
+değişiklikleri uygulandı:
+
+1. **MIC bazlı (Model Tanımlama Kodlu) ICN üretimi eklendi** — mevcut
+   Firma Kodlu (CAGE bazlı) üretim **hiç değiştirilmeden** korundu, kullanıcı
+   ICN oluşturma ekranında iki yöntem arasında radyo düğmesiyle seçim
+   yapabiliyor ("İkisi Birden" proje kuralı gereği). Formül gerçek Egzoz
+   Sistemi örneğiyle (`GA1140000`) birebir doğrulandı.
+2. **VM içinde etkin nokta (hotspot) + legend eksikliği giderildi** — bu,
+   önceki turlarda "VM'de hotspot görünmüyor" şikayetinin **asıl kök
+   nedeniydi**: `figureBlock()` yalnızca self-closing `<graphic />`
+   üretiyordu, hiç `<hotspot>`/`<legend>` yoktu. Artık gerçek FORSDOC
+   yapısıyla birebir (element/öznitelik adları dahil) üretiliyor, IMF ile
+   VM hotspot verisi **tek bir ortak kaynaktan** (`computeIcnHotspotObjects`)
+   geliyor.
+3. **SNS hiyerarşik eşleştirme altyapısı eklendi** (`snsKeysFromRow`,
+   `icnBelongsToSnsNode`) — kullanıcının netleştirdiği kural (üst seviye
+   seçilince tüm alt dallar dahil) fonksiyon seviyesinde uygulandı. **UI'da
+   bir "ICN kütüphanesi tarayıcısı" ekranı henüz eklenmedi** (spekülatif
+   özellik icat etmemek için bilinçli olarak kapsam dışı bırakıldı).
+
+**Kullanıcının bir sonraki adımı:** Güncellenmiş HTML ile hem Firma Kodlu
+hem MIC bazlı ICN içeren yeni VM+ICN+IMF paketleri üretip FORSDOC'a tekrar
+yüklemek ve (a) hotspot'ların VM içinde göründüğünü, (b) MIC bazlı ICN'in
+kabul edildiğini doğrulamak (bkz. `TODO.md` T-016).
+
+## Genel Durum (DÖRDÜNCÜ TUR — önceki mesajlaşmada)
+gerçek bir referans IMF dosyasıyla karşılaştırma yapıldı: buildImfXml()
+içinde imfCode/@imfIdentIcn yanlışlıkla "ICN-" ön ekiyle üretiliyordu —
+D-015 ile düzeltildi. D-010 [icnMetadata.xsd büyük/küçük harf] da bu
+kanıtla GERİ ALINDI.
+
+ÜÇÜNCÜ TUR — kullanıcının FORSDOC'a daha önce
 BAŞARIYLA yüklediği gerçek dosyalarla karşılaştırma yapıldı; asıl kök neden
 bulundu: <dmodule> kök elemanında xsi:noNamespaceSchemaLocation hiç yoktu
 — D-014. İKİNCİ TUR'da uygulanan systemCode-2-karakter düzeltmesi [D-012]
@@ -9,7 +50,33 @@ systemCode="GA1" [3 karakter] olarak duruyordu. İLK TUR'da: 7906 satırın
 tamamının yanlışlıkla reddedilmesine neden olan hata bulundu ve düzeltildi
 — D-011.)
 
-## Genel Durum (ÜÇÜNCÜ TUR — bu mesajlaşmada)
+## Genel Durum (DÖRDÜNCÜ TUR — bu mesajlaşmada)
+D-014 düzeltmesinden sonra kullanıcı VM ve ICN'i FORSDOC'a **başarıyla**
+yükleyebildi — büyük ilerleme. Ancak **ICN'deki etkin noktalar
+görünmüyordu.** Kullanıcı, daha önce **RPK Builder Professional V16.3**
+adlı başka bir araçla üretip FORSDOC'a etkin noktalarıyla birlikte
+**başarıyla** yüklediği bir referans dosya (`ICN-TB317-00024-001-01.PNG`
++ `IMF-TB317-00024-001-01_000-01.XML`) paylaştı.
+
+**Bulunan ve düzeltilen kesin hata (D-015):** `buildImfXml()` içinde,
+ön eki doğru şekilde kaldıran `code` değişkeni hesaplanıyor ama
+`imfCode/@imfIdentIcn` özniteliği için kullanılmıyor, yerine yanlışlıkla
+ham (ön ekli) `icn.code` yazılıyordu (`"ICN-TH743-00001-001-01"` yerine
+olması gereken `"TH743-00001-001-01"`). Bu, ICN görselinin gelmesini
+(DOCTYPE/ENTITY üzerinden, etkilenmedi) ama hotspot verisinin FORSDOC
+tarafından doğru görsele eşlenememesini (muhtemelen bu kimlik üzerinden
+eşleştirme yapıldığı için) açıklıyor.
+
+**Ayrıca D-010 GERİ ALINDI:** Aynı referans dosyada
+`xsi:noNamespaceSchemaLocation` büyük M ile (`icnMetadata.xsd`)
+kullanılıyordu; önceki oturumda küçük harfe çevrilmişti (doğrulanmamış
+kullanıcı beyanına dayanarak) — bu yanlıştı, geri alındı.
+
+**Kullanıcının bir sonraki adımı:** Güncellenmiş HTML ile yeni bir ICN/IMF
+paketi üretip FORSDOC'a tekrar yüklemek ve etkin noktaların gerçekten
+göründüğünü doğrulamak (bkz. `TODO.md` T-015).
+
+## Genel Durum (ÜÇÜNCÜ TUR — önceki mesajlaşmada)
 D-012 düzeltmesinden sonra kullanıcı AYNI FORSDOC hatasını tekrar aldı.
 Kullanıcıdan, FORSDOC'a **daha önce gerçekten başarıyla yüklediği** 11
 dosyalık bir ZIP istendi ve bizim üretimimizle doğrudan karşılaştırıldı.

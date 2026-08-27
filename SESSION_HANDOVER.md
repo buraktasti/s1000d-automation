@@ -1,5 +1,109 @@
 # SESSION_HANDOVER.md — Oturum Devir Teslimi
 
+## BEŞİNCİ TUR / FAZ 2 (yeni analiz turlarının ardından kod değişikliği uygulandı)
+
+**Önceki 3 alt-tur (Faz 1 x3, kod değişikliği YAPILMADI, yalnızca analiz):**
+1. Kullanıcı, gerçek 26 dosyalık bir FORSDOC export ZIP'i paylaştı (M0117
+   projesi). Analiz: VM'nin `<graphic>` içinde gerçekte `<hotspot>` +
+   `<legend>` bulunduğu, bizim üretimimizin bunları hiç üretmediği; ICN
+   kodlamasının MIC bazlı da olabildiği (`ICN-M0117-AAA-00310000-A-...`)
+   tespit edildi. MIC bazlı kod formülü tek örnekle kesinleştirilemedi.
+2. Kullanıcı, ikinci ve farklı SNS bağlamına ait odaklı bir paket paylaştı
+   (Egzoz Sistemi, `GA1-14-0000` / ICN `GA1140000`). Formül
+   (`systemCode+subSystemCode+subSubSystemCode+assyCode`) bu temiz örnekle
+   GÜÇLÜ BULGU seviyesinde doğrulandı; SNS→ICN filtreleme ve parent/child
+   davranışı için KARAR GEREKLİ olarak işaretlendi.
+3. Kullanıcı, resmi "Bilgi Kontrol Numarası" eğitim materyalini paylaştı.
+   Bu, ICN kod segmentlerinin (sorumlu firma kodu, varyant, versiyon,
+   gizlilik derecesi) kesin anlamlarını doğruladı. Ardından kullanıcı,
+   proje-özel iş kurallarını (SNS filtreleme = hiyerarşik/üst dahil alt,
+   ICN Metodu = İkisi Birden, SNS Sistem Kodu=00 dmCode/systemCode'un
+   yerine geçmez, M0117 kesin MIC değeri) açıkça onayladı.
+
+**Bu turda (FAZ 2) uygulanan kod değişiklikleri (D-016):**
+1. `snsKeysFromRow(row)` — DMC'den systemCode/subSystemCode/
+   subSubSystemCode/assyCode ve systemKey/subSystemKey/subSubSystemKey/
+   componentKey türetir. `dmCode/@systemCode`'u ASLA "SNS Sistem Kodu: 00"
+   proje sabitiyle karıştırmıyor — her zaman gerçek DMC segmentini okuyor.
+2. `nextIcnSerial()`/`extractIcnSerial()` — Firma Kodlu ve MIC bazlı
+   ICN'ler arasında PAYLAŞILAN tek sıra numarası sayacı (çakışma önleme).
+3. `nextIcnCodeMic(row)` — MIC bazlı ICN kodu, gerçek Egzoz Sistemi
+   örneğiyle birebir doğrulanan formülle.
+4. `nextIcnCode()` — dışa dönük davranışı DEĞİŞMEDİ, içeride paylaşılan
+   sayacı kullanıyor.
+5. ICN oluşturma ekranına "Firma Kodlu" / "Model Tanımlama Kodlu" radyo
+   seçimi eklendi (varsayılan: Firma Kodlu — mevcut davranış korunuyor).
+6. `computeIcnHotspotObjects(icn)` — hotspot ident/sıra/D-013 yinelenen-
+   numara mantığını TEK bir yerde hesaplar; hem `buildImfXml()` hem
+   `figureBlock()` bunu kullanır (tek veri kaynağı garantisi).
+7. `figureBlock(icn, figId)` **yeniden yazıldı** — artık `icn.records`
+   doluysa VM'nin `<graphic>` içine `<hotspot>` elemanları + ardından
+   `<legend><definitionList>` üretiyor (gerçek FORSDOC yapısıyla birebir
+   element/öznitelik adları). `icn.records` boşsa eski self-closing
+   `<graphic />` davranışı korunuyor (regresyon yok).
+8. `icnBelongsToSnsNode(icn, nodeFullPath)` — hiyerarşik SNS eşleştirme
+   (üst seçilince alt dallar da dahil, kullanıcının onayladığı kural).
+9. `ICN_LIBRARY` kayıt yapısı genişletildi: `method, systemCode,
+   subSystemCode, subSubSystemCode, assyCode, systemKey, subSystemKey,
+   subSubSystemKey, componentKey` eklendi; kayıt sırasında ilk hedef
+   VM'den türetiliyor, hedefler arası SNS uyuşmazlığında uyarı veriliyor.
+
+**Test:** 52/52 yeni test PASS — gerçek Egzoz Sistemi verisiyle MIC kod
+formülü, VM↔IMF hotspot senkronu, hiyerarşik SNS eşleştirme, ve D-001→D-015
+regresyonlarının hiçbirinin bozulmadığı doğrulandı.
+
+**Bilinçli olarak YAPILMAYAN:** SNS ağacında "ICN kütüphanesi tarayıcısı"
+ekranı (spekülatif UI icat etmemek için) — yalnızca alt yapı hazır.
+
+**Bir sonraki adım: kullanıcının bu düzeltmelerle üretilmiş yeni paketleri
+FORSDOC'a tekrar yükleyip (a) hotspot'ların VM'de göründüğünü, (b) MIC
+bazlı ICN'in kabul edildiğini doğrulaması** (bkz. `TODO.md` T-016).
+
+---
+
+## DÖRDÜNCÜ TUR (yeni bir konuşmada devam — VM+ICN başarıyla yüklendi, ama etkin noktalar gelmiyordu)
+
+1. Kullanıcı, D-011→D-014 düzeltmeleriyle üretilmiş dosyaları FORSDOC'a
+   yükledi: **VM ve ICN başarıyla geldi** (büyük ilerleme, D-014'ün gerçek
+   kök nedeni doğru bulduğu teyit edildi). Ancak **ICN'deki etkin noktalar
+   (hotspot'lar) görünmüyordu.**
+2. Kullanıcı, daha önce **RPK Builder Professional V16.3 (Tesseract OCR)**
+   adlı başka bir araçla üretip FORSDOC'a etkin noktalarıyla birlikte
+   **başarıyla** yüklediği bir referans ICN/IMF çıktısı paylaştı
+   (`ICN-TB317-00024-001-01.PNG` + `IMF-TB317-00024-001-01_000-01.XML`).
+3. Bu referans IMF dosyası bizim `buildImfXml()` çıktımızla satır satır
+   karşılaştırıldı. İki kesin fark bulundu:
+   - **`imfCode/@imfIdentIcn`**: referans dosyada ön eksiz
+     (`"TB317-00024-001-01"`), bizim üretimimizde yanlışlıkla ön ekli
+     (`"ICN-TH743-00001-001-01"`). Kod incelendiğinde, ön eki doğru
+     kaldıran `code` değişkeninin zaten hesaplandığı ama **hiç
+     kullanılmadığı** görüldü — yerine ham `icn.code` yazılıyordu.
+   - **`xsi:noNamespaceSchemaLocation`**: referans dosyada büyük M ile
+     (`icnMetadata.xsd`); bizim üretimimizde (önceki oturumun D-010
+     düzeltmesiyle) küçük harfle (`icnmetadata.xsd`).
+4. **D-015 uygulandı:** `imfIdentIcn="'+xmlEscape(icn.code)+'"` →
+   `imfIdentIcn="'+xmlEscape(code)+'"` (tek satır, zaten var olan doğru
+   değişken kullanıldı).
+5. **D-010 GERİ ALINDI:** `icnmetadata.xsd` → `icnMetadata.xsd` (büyük M,
+   referans dosyayla eşleşecek şekilde).
+6. **Test:** Gerçek dosyadan çıkarılan `buildImfXml()` ile doğrulandı:
+   `imfIdentIcn` artık ön eksiz üretiliyor, `icnMetadata.xsd` büyük M,
+   dosya adı (zaten doğruydu) değişmedi.
+7. Güncellenmiş HTML ve 4 hafıza dosyası tekrar üretildi.
+
+**Neden bu belirti (görsel geliyor, hotspot gelmiyor) mantıklı:** ICN
+görseli, veri modülündeki DOCTYPE/ENTITY + `<graphic infoEntityIdent=
+"ICN-...">` bağlantısı üzerinden gösteriliyor (bu zaten doğruydu,
+etkilenmedi). Hotspot verisi ayrı bir dosyada (IMF) taşınıyor ve FORSDOC
+muhtemelen bu IMF'yi doğru ICN'e `imfIdentIcn` üzerinden eşliyor — değer
+tutarsız olunca görsel geliyor ama hotspot katmanı sessizce atlanıyor.
+
+**Bir sonraki adım: kullanıcının bu düzeltmeyle üretilmiş yeni bir ICN/IMF
+paketini FORSDOC'a tekrar yükleyip etkin noktaların gerçekten göründüğünü
+doğrulaması** (bkz. `TODO.md` T-015).
+
+---
+
 ## ÜÇÜNCÜ TUR (aynı oturumda — D-012 yanlış çıktı, gerçek kök neden D-014 ile bulundu)
 
 1. Kullanıcı, D-012+D-013 içeren yeni bir ZIP ile FORSDOC'a tekrar denedi

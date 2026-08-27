@@ -235,6 +235,17 @@
         <div class="status-box" id="icn-ocr-status"></div>
 
         <div class="field" style="margin-top:10px;">
+          <label>ICN Kodlama Yöntemi</label>
+          <div style="display:flex;gap:14px;font-size:12.5px;padding:4px 0;">
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+              <input type="radio" name="icn-method" id="icn-method-cage" value="cage" checked> Firma Kodlu (CAGE bazlı)
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+              <input type="radio" name="icn-method" id="icn-method-mic" value="mic"> Model Tanımlama Kodlu (MIC bazlı)
+            </label>
+          </div>
+        </div>
+        <div class="field">
           <label>ICN Kodu</label><input type="text" id="icn-code-field">
         </div>
         <div class="field">
@@ -439,18 +450,80 @@ let DATA_ROWS = [];
 let TREE = null;
 
 // ---------- ICN / Teknik Görsel durumu ----------
-let ICN_LIBRARY = []; // {code, title, imageDataUrl, naturalWidth, naturalHeight, records:[{hotspot,x,y,partNo,partName,description,qty,nsn,manufacturer}]}
+// {code, title, imageDataUrl, naturalWidth, naturalHeight, records:[{hotspot,x,y,partNo,partName,description,qty,nsn,manufacturer}],
+//  method:'cage'|'mic', systemCode, subSystemCode, subSubSystemCode, assyCode, systemKey, subSystemKey, subSubSystemKey, componentKey}
+let ICN_LIBRARY = [];
 let ICN_LINKS = {};   // dmc -> icnCode
 function getIcnForRow(dmc){
   const code = ICN_LINKS[dmc];
   if (!code) return null;
   return ICN_LIBRARY.find(function(i){ return i.code===code; }) || null;
 }
+// D-016: DMC satırından SNS hiyerarşi anahtarlarını türet. Gerçek FORSDOC export verisiyle (2 bağımsız
+// örnek) doğrulanmış tek nokta: componentKey (systemCode+subSystemCode+subSubSystemCode+assyCode) MIC bazlı
+// ICN'nin SNS segmentiyle birebir eşleşiyor. systemKey/subSystemKey/subSubSystemKey, üst SNS seviyeleri için
+// hiyerarşik filtreleme amacıyla kavramsal olarak tanımlandı (henüz UI'da kullanılmıyor).
+function snsKeysFromRow(row){
+  const parts = row.dmc.split('-');
+  const systemCode = parts[2];
+  const subSystemCode = row.altAltSis.charAt(0);
+  const subSubSystemCode = row.altAltSis.charAt(1);
+  const assyCode = row.bilesen;
+  return {
+    systemCode: systemCode, subSystemCode: subSystemCode, subSubSystemCode: subSubSystemCode, assyCode: assyCode,
+    systemKey: systemCode,
+    subSystemKey: systemCode + subSystemCode,
+    subSubSystemKey: systemCode + subSystemCode + subSubSystemCode,
+    componentKey: systemCode + subSystemCode + subSubSystemCode + assyCode,
+  };
+}
+// D-016: Bir ICN, verilen SNS node'unun (veya onun herhangi bir alt dalının) kapsamına giriyor mu?
+// KOLUMAN uygulama kararı: üst seviye seçilince tüm alt dallardaki ICN'ler de dahil edilir (hiyerarşik).
+// node.full formatı mevcut SNS ağacında "sysCode-altAltSis-bilesen" (tireli) şeklindedir; ICN'nin kendi
+// componentKey'i tiresizdir (örn. "GA1140000"), bu yüzden karşılaştırma öncesi node yolu aynı şekilde
+// tiresiz birleştirilir.
+function icnBelongsToSnsNode(icn, nodeFullPath){
+  if (!icn || !icn.componentKey || !nodeFullPath) return false;
+  const nodeKey = String(nodeFullPath).split('-').join('');
+  return icn.componentKey.indexOf(nodeKey) === 0;
+}
+// D-016: "İkisi Birden" (Firma Kodlu + Model Tanımlama Kodlu) aynı proje içinde birlikte var olabildiğinden,
+// iki farklı kod biçimi arasında sıra numarası çakışmasını önlemek için TEK bir paylaşılan sayaç kullanılır.
+function extractIcnSerial(code){
+  // Firma Kodlu: ICN-{CAGE}-{serial5}-...
+  let m = /^ICN-[^-]+-(\d{5})-/.exec(code);
+  if (m) return parseInt(m[1], 10);
+  // Model Tanımlama Kodlu: ICN-{MIC}-{SDC}-{SNS}-{A}-{CAGE}-{serial5}-...
+  m = /^ICN-[^-]+-[^-]+-[^-]+-[^-]+-[^-]+-(\d{5})-/.exec(code);
+  if (m) return parseInt(m[1], 10);
+  return 0;
+}
+function nextIcnSerial(){
+  let max = 0;
+  ICN_LIBRARY.forEach(function(i){ const s = extractIcnSerial(i.code); if (s > max) max = s; });
+  return max + 1;
+}
 function nextIcnCode(){
-  let n = 1;
+  // Firma Kodlu ICN (mevcut format DEĞİŞMEDİ) — yalnızca sıra numarası artık her iki kodlama yöntemi
+  // arasında paylaşılan ortak sayaçtan (nextIcnSerial) geliyor, çakışma riskini ortadan kaldırmak için.
+  let n = nextIcnSerial();
+  let code = 'ICN-'+SETTINGS.cage+'-'+String(n).padStart(5,'0')+'-001-01';
   const used = new Set(ICN_LIBRARY.map(function(i){return i.code;}));
-  let code;
-  do { code = 'ICN-'+SETTINGS.cage+'-'+String(n).padStart(5,'0')+'-001-01'; n++; } while (used.has(code));
+  while (used.has(code)){ n++; code = 'ICN-'+SETTINGS.cage+'-'+String(n).padStart(5,'0')+'-001-01'; }
+  return code;
+}
+// D-016: Model Tanımlama Kodlu (MIC bazlı) ICN kodu — gerçek FORSDOC export'undaki iki bağımsız örnekle
+// (Temel Motor GA1-18-0000 / Egzoz Sistemi GA1-14-0000) doğrulanan formüle göre üretilir:
+// ICN-{MIC}-{SDC}-{systemCode+subSystemCode+subSubSystemCode+assyCode}-{sorumluFirmaKodu}-{CAGE}-{sıra:5hane}-{varyant}-{versiyon:3hane}-{gizlilik:2hane}
+// "Sorumlu firma kodu" ve "varyant" alanları için DERMAN projesinde gözlemlenen sabit "A" değeri kullanılıyor
+// (her iki gerçek örnekte de böyleydi; kesin nedeni DOĞRULANAMADI — bkz. DECISIONS.md D-016).
+function nextIcnCodeMic(row){
+  const keys = snsKeysFromRow(row);
+  const serial = String(nextIcnSerial()).padStart(5,'0');
+  let code = 'ICN-'+SETTINGS.mic+'-'+SETTINGS.sdc+'-'+keys.componentKey+'-A-'+SETTINGS.cage+'-'+serial+'-A-001-01';
+  const used = new Set(ICN_LIBRARY.map(function(i){return i.code;}));
+  let n = parseInt(serial, 10);
+  while (used.has(code)){ n++; code = 'ICN-'+SETTINGS.mic+'-'+SETTINGS.sdc+'-'+keys.componentKey+'-A-'+SETTINGS.cage+'-'+String(n).padStart(5,'0')+'-A-001-01'; }
   return code;
 }
 function dataUrlToBytes(dataUrl){
@@ -471,29 +544,36 @@ function imfObjectCoordinates(icn, rec){
   const f = function(n){ return (Math.round(n*1000)/1000).toString(); };
   return f(l)+' '+f(t)+','+f(l)+' '+f(b)+','+f(r)+' '+f(b)+','+f(r)+' '+f(t);
 }
-function buildImfXml(icn){
-  const code = imfIdentFromIcn(icn);
-  const objs = [];
+function wholeImageCoordinates(icn){
   const w = icn.naturalWidth||1, h = icn.naturalHeight||1;
-  objs.push('<icnObject icnObjectIdent="hot0" icnObjectName="0" icnObjectTitle="'+xmlEscape(icn.title||'ANA MONTAJ')+'" objectCoordinates="0 0,0 '+h+','+w+' '+h+','+w+' 0" />');
+  return '0 0,0 '+h+','+w+' '+h+','+w+' 0';
+}
+// D-016: buildImfXml() (IMF) ve figureBlock() (VM) tarafından ORTAK kullanılan hotspot listesi.
+// Her ikisi de aynı sıralama/ident-atama/yinelenen-hotspot-numarası (D-013) mantığından geçer, böylece
+// VM'deki <hotspot> ile IMF'deki <icnObject> arasında applicationStructureIdent/icnObjectIdent,
+// isim, başlık ve koordinat değerleri HER ZAMAN birebir aynı kalır (gerçek FORSDOC verisiyle doğrulanan
+// gereksinim — bkz. DECISIONS.md D-016).
+function computeIcnHotspotObjects(icn){
   const located = icn.records.filter(function(r){ return r.hotspot && r.x!=='' && r.y!==''; });
   located.sort(function(a,b){ return (parseInt(a.hotspot)||0)-(parseInt(b.hotspot)||0); });
-  // D-013: Aynı "Konum" (hotspot) numarasına sahip birden fazla parça satırı olabilir (ör. aynı
-  // konumda iki farklı NSN/parça). icnObjectIdent yalnızca hotspot numarasından türetilirse bu durumda
-  // ikinci satır BİRİNCİSİYLE AYNI icnObjectIdent değerini alır — bu, IMF/ICN metadata dosyasında
-  // yinelenen bir kimlik üretir ve FORSDOC/XSD tarafında reddedilme riski taşır. Yinelenen hotspot
-  // numaralarına harf soneki ekleyerek (b, c, ...) her icnObjectIdent'i benzersiz kılıyoruz;
-  // icnObjectName görünen etiket olarak sade hotspot numarasını korumaya devam ediyor.
   const usedIdents = {};
-  located.forEach(function(r){
+  return located.map(function(r){
     const baseIdent = 'hot'+String(r.hotspot).padStart(3,'0');
     let ident = baseIdent, suffixCode = 98; // 'b'
     while (usedIdents[ident]){ ident = baseIdent + String.fromCharCode(suffixCode); suffixCode++; }
     usedIdents[ident] = true;
-    objs.push('<icnObject icnObjectIdent="'+ident+'" icnObjectName="'+xmlEscape(r.hotspot)+'" icnObjectTitle="'+xmlEscape(r.partName||r.description||'')+'" objectCoordinates="'+imfObjectCoordinates(icn, r)+'" />');
+    return {ident: ident, name: String(r.hotspot), title: r.partName||r.description||'', coordinates: imfObjectCoordinates(icn, r)};
   });
-  return '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE icnMetadataFile []>\n<icnMetadataFile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_5-0/xml_schema_flat/icnmetadata.xsd">' +
-    '<imfIdentAndStatusSection><imfAddress><imfIdent><imfCode imfIdentIcn="'+xmlEscape(icn.code)+'" /><issueInfo issueNumber="'+SETTINGS.issue+'" inWork="00" /></imfIdent>' +
+}
+function buildImfXml(icn){
+  const code = imfIdentFromIcn(icn);
+  const objs = [];
+  objs.push('<icnObject icnObjectIdent="hot0" icnObjectName="0" icnObjectTitle="'+xmlEscape(icn.title||'ANA MONTAJ')+'" objectCoordinates="'+wholeImageCoordinates(icn)+'" />');
+  computeIcnHotspotObjects(icn).forEach(function(o){
+    objs.push('<icnObject icnObjectIdent="'+xmlEscape(o.ident)+'" icnObjectName="'+xmlEscape(o.name)+'" icnObjectTitle="'+xmlEscape(o.title)+'" objectCoordinates="'+o.coordinates+'" />');
+  });
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE icnMetadataFile []>\n<icnMetadataFile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_5-0/xml_schema_flat/icnMetadata.xsd">' +
+    '<imfIdentAndStatusSection><imfAddress><imfIdent><imfCode imfIdentIcn="'+xmlEscape(code)+'" /><issueInfo issueNumber="'+SETTINGS.issue+'" inWork="00" /></imfIdent>' +
     '<imfAddressItems><icnTitle>'+xmlEscape(icn.title||icn.code)+'</icnTitle></imfAddressItems></imfAddress>' +
     '<imfStatus><security securityClassification="01" /><responsiblePartnerCompany enterpriseCode="'+xmlEscape(SETTINGS.cage)+'"><enterpriseName>'+xmlEscape(SETTINGS.org)+'</enterpriseName></responsiblePartnerCompany>' +
     '<originator enterpriseCode="'+xmlEscape(SETTINGS.cage)+'"><enterpriseName>'+xmlEscape(SETTINGS.org)+'</enterpriseName></originator><qualityAssurance><unverified /></qualityAssurance></imfStatus></imfIdentAndStatusSection>' +
@@ -997,9 +1077,28 @@ function icnDoctype(icnCode){
   return '<!DOCTYPE dmodule [<!ENTITY '+icnCode+' SYSTEM "'+icnCode+'.PNG" NDATA png><!NOTATION png PUBLIC "-//W3C//NOTATION PNG 1.0//EN">]>\n';
 }
 function figureBlock(icn, figId){
-  return '<figure id="'+xmlEscape(figId||'fig-0001')+'">\n' +
+  const fid = xmlEscape(figId||'fig-0001');
+  const hotspots = computeIcnHotspotObjects(icn);
+  if (!hotspots.length){
+    // D-016: hiç hotspot tanımlanmamış bir ICN için eski (self-closing) davranış korunur — regresyon yok.
+    return '<figure id="'+fid+'">\n' +
+           '          <title>'+xmlEscape(icn.title||icn.code)+'</title>\n' +
+           '          <graphic infoEntityIdent="'+xmlEscape(icn.code)+'" />\n' +
+           '        </figure>';
+  }
+  // "hot0" (Bütün Resim) — gerçek FORSDOC export'unda hotspot'lu her ICN'de bulunan sabit ana kayıt.
+  const allItems = [{ident:'hot0', name:'0', title: icn.title||'Bütün Resim', coordinates: wholeImageCoordinates(icn)}].concat(hotspots);
+  const hotspotXml = allItems.map(function(o, i){
+    return '<hotspot id="'+fid+'-hot-'+String(i).padStart(4,'0')+'" applicationStructureIdent="'+xmlEscape(o.ident)+'" applicationStructureName="'+xmlEscape(o.name)+'" hotspotTitle="'+xmlEscape(o.title)+'" objectCoordinates="'+o.coordinates+'" />';
+  }).join('');
+  const legendXml = allItems.map(function(o, i){
+    const n = String(i).padStart(4,'0');
+    return '<definitionListItem id="'+fid+'-dli-'+n+'"><listItemTerm id="'+fid+'-trm-'+n+'">'+xmlEscape(o.name)+'</listItemTerm><listItemDefinition><para>'+xmlEscape(o.title)+'</para></listItemDefinition></definitionListItem>';
+  }).join('');
+  return '<figure id="'+fid+'">\n' +
          '          <title>'+xmlEscape(icn.title||icn.code)+'</title>\n' +
-         '          <graphic infoEntityIdent="'+xmlEscape(icn.code)+'" />\n' +
+         '          <graphic id="'+fid+'-gra-0001" infoEntityIdent="'+xmlEscape(icn.code)+'">'+hotspotXml+'</graphic>' +
+         '<legend><definitionList><title>Resim Açıklaması:</title>'+legendXml+'</definitionList></legend>\n' +
          '        </figure>';
 }
 function injectIcnIntoXml(xml, schema, icn){
@@ -1366,6 +1465,7 @@ function renderIcnTargetChecklist(){
       '<span><b>'+escapeHtml(row.sns)+'</b> — '+escapeHtml(row.title)+' <span style="color:#bbb;">('+escapeHtml(row.schema)+'/'+escapeHtml(row.infoCode)+')</span></span>'+
       '</label>';
   }).join('');
+  el.querySelectorAll('.icn-target-cb').forEach(function(cb){ cb.addEventListener('change', suggestIcnDefaults); });
 }
 
 document.getElementById('logo-img').src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSIyNCI+PHRleHQgeD0iMCIgeT0iMTgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMxRjFCNEQiPktvbHVtYW48L3RleHQ+PC9zdmc+";
@@ -1469,10 +1569,30 @@ document.getElementById('icn-image-input').addEventListener('change', function(e
   reader.readAsDataURL(f);
 });
 
+let LAST_SUGGESTED_ICN_CODE = '';
+function currentIcnTargetRows(){
+  return Array.from(document.querySelectorAll('.icn-target-cb:checked'))
+    .map(function(cb){ return findRowByDmc(cb.dataset.dmc); })
+    .filter(Boolean);
+}
 function suggestIcnDefaults(){
   const codeField = document.getElementById('icn-code-field');
-  if (!codeField.value) codeField.value = nextIcnCode();
+  const isMic = document.getElementById('icn-method-mic').checked;
+  let suggestion;
+  if (isMic){
+    const targets = currentIcnTargetRows();
+    if (!targets.length) return; // hedef VM seçilmeden MIC bazlı kod türetilemez (SNS gerekiyor)
+    suggestion = nextIcnCodeMic(targets[0]);
+  } else {
+    suggestion = nextIcnCode();
+  }
+  if (!codeField.value || codeField.value === LAST_SUGGESTED_ICN_CODE){
+    codeField.value = suggestion;
+    LAST_SUGGESTED_ICN_CODE = suggestion;
+  }
 }
+document.getElementById('icn-method-cage').addEventListener('change', suggestIcnDefaults);
+document.getElementById('icn-method-mic').addEventListener('change', suggestIcnDefaults);
 
 function drawIcnCanvas(){
   if (!ICN_IMAGE) return;
@@ -1545,15 +1665,33 @@ document.getElementById('icn-save-btn').onclick = function(){
   const code = document.getElementById('icn-code-field').value.trim();
   if (!code || !/^ICN-/i.test(code)){ st.className='status-box status-err'; st.textContent='Geçerli bir ICN kodu girin (ICN- ile başlamalı).'; return; }
   const title = document.getElementById('icn-title-field').value.trim() || code;
+  const method = document.getElementById('icn-method-mic').checked ? 'mic' : 'cage';
 
   const targets = Array.from(document.querySelectorAll('.icn-target-cb:checked')).map(function(cb){ return cb.dataset.dmc; });
   if (!targets.length){ st.className='status-box status-err'; st.textContent='En az bir hedef VM seçin (yukarıdaki listeden).'; return; }
+
+  // D-016: ICN'in SNS bağlamını, ilk seçili hedef VM'den türet. Birden fazla hedef VM farklı SNS
+  // bağlamlarına aitse (nadir ama olası), kullanıcıyı uyar — engelleme yok, yalnızca bilgilendirme.
+  const targetRows = targets.map(findRowByDmc).filter(Boolean);
+  const snsKeys = targetRows.length ? snsKeysFromRow(targetRows[0]) : {};
+  let snsMismatchWarning = '';
+  if (targetRows.length > 1){
+    const distinctKeys = new Set(targetRows.map(function(r){ return snsKeysFromRow(r).componentKey; }));
+    if (distinctKeys.size > 1){
+      snsMismatchWarning = ' UYARI: Seçili hedef VM\'ler farklı SNS bağlamlarına ait; ICN\'in SNS bilgisi yalnızca ilk hedeften ('+targetRows[0].dmc+') alındı.';
+    }
+  }
 
   const existingIdx = ICN_LIBRARY.findIndex(function(i){ return i.code===code; });
   const icnEntry = {
     code: code, title: title, imageDataUrl: ICN_IMAGE.dataUrl,
     naturalWidth: ICN_IMAGE.naturalWidth, naturalHeight: ICN_IMAGE.naturalHeight,
     records: ICN_RECORDS.map(function(r){ return Object.assign({}, r); }),
+    method: method,
+    systemCode: snsKeys.systemCode, subSystemCode: snsKeys.subSystemCode,
+    subSubSystemCode: snsKeys.subSubSystemCode, assyCode: snsKeys.assyCode,
+    systemKey: snsKeys.systemKey, subSystemKey: snsKeys.subSystemKey,
+    subSubSystemKey: snsKeys.subSubSystemKey, componentKey: snsKeys.componentKey,
   };
   if (existingIdx>=0) ICN_LIBRARY[existingIdx] = icnEntry; else ICN_LIBRARY.push(icnEntry);
   document.getElementById('icn-library-count').textContent = ICN_LIBRARY.length;
@@ -1563,7 +1701,7 @@ document.getElementById('icn-save-btn').onclick = function(){
   renderTable();
 
   st.className = 'status-box status-ok';
-  st.textContent = 'ICN kaydedildi: '+code+'. '+targets.length+' VM\'e bağlandı: '+targets.join(', ');
+  st.textContent = 'ICN kaydedildi: '+code+'. '+targets.length+' VM\'e bağlandı: '+targets.join(', ')+snsMismatchWarning;
 };
 
 document.getElementById('icn-zip-btn').onclick = function(){

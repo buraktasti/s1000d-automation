@@ -7,6 +7,193 @@ Gereken Noktalar".
 
 ---
 
+## D-016 — FAZ 2: MIC bazlı (Model Tanımlama Kodlu) ICN üretimi + VM hotspot/legend gömme + SNS hiyerarşik eşleştirme (UYGULANDI ✅ — gerçek FORSDOC verisiyle test edildi; FORSDOC'ta yeniden import testi bekliyor)
+
+**Durum:** İki ayrı gerçek FORSDOC export paketi (Temel Motor/GA1-18-0000 ve
+Egzoz Sistemi/GA1-14-0000) ve kullanıcının paylaştığı resmi "Bilgi Kontrol
+Numarası" eğitim materyaliyle çapraz doğrulanan analiz sonucunda uygulandı.
+
+**1) MIC bazlı ICN kod formülü (GÜÇLÜ BULGU → uygulandı):**
+```
+ICN-{MIC}-{SDC}-{systemCode+subSystemCode+subSubSystemCode+assyCode}-A-{CAGE}-{sıra:5hane}-A-001-01
+```
+Gerçek Egzoz Sistemi çiftiyle (`M0117-AAA-GA1-14-0000-00AA-040A-A` →
+`ICN-M0117-AAA-GA1140000-A-TH743-00002-A-001-01`) birebir doğrulandı.
+"Sorumlu firma kodu" ve "varyant" alanları için DERMAN'da gözlemlenen sabit
+`"A"` değeri kullanıldı — bu değerin DERMAN için neden "A" olduğu hâlâ
+**DOĞRULANAMADI** (proje kararı/kullanıcı onayına dayanıyor, teknik bir
+zorunluluk değil).
+
+**Uygulanan fonksiyonlar (yeni):**
+- `snsKeysFromRow(row)` — DMC satırından `systemCode/subSystemCode/
+  subSubSystemCode/assyCode` ve hesaplanmış `systemKey/subSystemKey/
+  subSubSystemKey/componentKey` üretir.
+- `nextIcnSerial()`/`extractIcnSerial()` — Firma Kodlu VE MIC bazlı ICN'ler
+  arasında **paylaşılan tek bir sıra numarası sayacı** (çakışmayı önlemek
+  için; gerçek FORSDOC verisinde de seri numarasının kodlama yönteminden
+  bağımsız, proje geneli tek bir sayaç olduğu görüldü).
+- `nextIcnCodeMic(row)` — MIC bazlı ICN kodu üretir.
+- `nextIcnCode()` — **DEĞİŞMEDİ (dışa dönük davranışı aynı)**, yalnızca
+  içeride artık paylaşılan `nextIcnSerial()`'ı kullanıyor.
+
+**UI:** ICN oluşturma ekranına "Firma Kodlu" / "Model Tanımlama Kodlu" radyo
+seçimi eklendi (varsayılan: Firma Kodlu, yani **mevcut davranış hiç
+değişmedi** — kullanıcı açıkça MIC bazlı'yı seçmedikçe eskisi gibi çalışır).
+"İkisi Birden" proje kuralı gereği her iki yöntem de aynı anda destekleniyor.
+
+**2) VM içinde hotspot/legend eksikliği (KRİTİK, EKSİK → uygulandı):**
+Gerçek FORSDOC export'unda VM'nin `<graphic>` elemanı içinde `<hotspot>`
+çocukları ve ardından bir `<legend><definitionList>` bloğu bulunduğu, ama
+uygulamamızın yalnızca self-closing `<graphic />` ürettiği daha önce
+doğrulanmıştı (bkz. önceki Faz 1 analizi). Bu oturumda düzeltildi:
+
+- `computeIcnHotspotObjects(icn)` — hotspot listesini (ident ataması,
+  D-013 yinelenen-numara düzeltmesi, sıralama) **tek bir yerde** hesaplar;
+  hem `buildImfXml()` (IMF) hem `figureBlock()` (VM) bu **aynı** fonksiyonu
+  kullanır. Bu, "VM ve IMF hotspot verisi aynı kaynaktan gelmeli" kesin
+  gereksinimini (gerçek FORSDOC verisiyle doğrulandı) sağlar.
+- `figureBlock(icn, figId)` yeniden yazıldı: `icn.records` doluysa artık
+  `<graphic>` içinde `<hotspot id=... applicationStructureIdent=...
+  applicationStructureName=... hotspotTitle=... objectCoordinates=... />`
+  elemanları ve ardından `<legend><definitionList>...</definitionList>
+  </legend>` üretiyor — gerçek FORSDOC yapısıyla birebir aynı element/
+  öznitelik adları.
+- **Geriye dönük uyumluluk:** `icn.records` boşsa (hiç hotspot tanımlı
+  değilse) **eski self-closing `<graphic />` davranışı korunuyor** —
+  regresyon yok.
+
+**3) SNS hiyerarşik eşleştirme (veri modeli + fonksiyon, uygulandı; UI
+bağlama henüz yapılmadı):**
+- `icnBelongsToSnsNode(icn, nodeFullPath)` — bir ICN'in verilen SNS
+  düğümünün (veya üst düğümlerinden birinin) kapsamına girip girmediğini
+  `componentKey` üzerinden hiyerarşik olarak (üst seçilince alt dahil)
+  test eder. Bu davranış kullanıcı tarafından **"FORSDOC zorunlu kuralı
+  değil, KOLUMAN uygulama kararı"** olarak netleştirildi.
+- `ICN_LIBRARY` kayıtlarına `method, systemCode, subSystemCode,
+  subSubSystemCode, assyCode, systemKey, subSystemKey, subSubSystemKey,
+  componentKey` alanları eklendi; ICN kaydedilirken **ilk seçili hedef
+  VM'den** türetiliyor. Birden fazla hedef VM farklı SNS bağlamlarındaysa
+  kullanıcıya uyarı gösteriliyor (engellemeden).
+- **Henüz yapılmadı (kapsam dışı bırakıldı):** SNS ağacında bir düğüm
+  seçildiğinde `ICN_LIBRARY`'yi bu fonksiyonla görsel olarak filtreleyen
+  bir "ICN kütüphanesi tarayıcısı" ekranı — böyle bir ekran hiç yoktu
+  (Faz 1'de EKSİK olarak işaretlenmişti), spekülatif bir UI icat etmemek
+  için bu oturumda eklenmedi; yalnızca alt yapı (veri + fonksiyon) hazır.
+
+**SNS Sistem Kodu=00 çelişkisi ele alındı:** `snsKeysFromRow()` hiçbir
+yerde "SNS Sistem Kodu: 00" proje sabitini `dmCode/@systemCode` yerine
+KULLANMIYOR — her zaman gerçek DMC'nin kendi `systemCode` segmentini
+(`row.dmc.split('-')[2]`) okuyor. Kullanıcının açıkça yasakladığı karışıklık
+oluşmadı.
+
+**Test sonuçları (52/52 PASS):**
+- GRUP Q: `snsKeysFromRow()` ve `nextIcnCodeMic()` gerçek Egzoz Sistemi
+  çiftiyle (`GA1140000`) birebir doğrulandı.
+- GRUP R/S: Paylaşılan seri numarası sayacının Firma Kodlu ↔ MIC bazlı
+  arasında çakışma üretmediği doğrulandı.
+- GRUP T: `figureBlock()`'un gerçek Egzoz Sistemi hotspot verisiyle
+  ürettiği VM çıktısı, gerçek FORSDOC dosyasıyla element/öznitelik
+  düzeyinde karşılaştırıldı; VM hotspot ident listesi ile IMF icnObject
+  ident listesinin **birebir aynı** olduğu doğrulandı.
+- GRUP U: Hotspot'suz bir ICN için eski self-closing davranışın
+  korunduğu (regresyon yok) doğrulandı.
+- GRUP V: `icnBelongsToSnsNode()` hiyerarşik eşleştirme (bileşen → alt alt
+  sistem → alt sistem → sistem, üst her seviyede eşleşiyor; farklı
+  sistem/alt-alt-sistem eşleşmiyor) doğrulandı.
+- GRUP W: D-001 (systemCode), D-009 (infoCode), D-010 (icnMetadata.xsd),
+  D-011 (dmcLengthError), D-012 (systemCode ham segment), D-014
+  (xsi:noNamespaceSchemaLocation), D-015 (imfIdentIcn ön eksiz) — hiçbiri
+  bozulmadı.
+
+**Neden hâlâ tam "KAPATILDI" değil:** Bu oturumda **hiçbir gerçek FORSDOC
+import testi yapılmadı** (yalnızca Node.js'te dahili test + gerçek dosyayla
+statik karşılaştırma). Kullanıcının bu düzeltmeyle üretilmiş yeni bir
+VM+ICN+IMF paketini (hem Firma Kodlu hem MIC bazlı ICN ile) FORSDOC'a
+import edip: (a) VM içindeki hotspot'ların artık göründüğünü, (b) MIC bazlı
+ICN'in FORSDOC tarafından kabul edildiğini doğrulaması gerekiyor. Ayrıca
+"A" placeholder'ının DERMAN için doğruluğu ve SNS hiyerarşik filtreleme
+UI'ının nereye/nasıl ekleneceği kullanıcı kararı bekliyor (bkz. `TODO.md`
+T-016).
+
+---
+
+## D-015 — KRİTİK: buildImfXml() içinde imfCode/@imfIdentIcn yanlışlıkla "ICN-" ön ekiyle üretiliyordu — ICN görseli geliyor ama etkin noktalar (hotspot) gelmiyordu (ÇÖZÜLDÜ ✅ — kullanıcının RPK Builder ile ürettiği, FORSDOC'ta etkin noktaları da başarıyla çalışan gerçek bir IMF dosyasıyla doğrudan karşılaştırılarak doğrulandı)
+
+**Durum:** D-014 düzeltmesinden sonra kullanıcı VM ve ICN'i FORSDOC'a
+başarıyla yükleyebildi, ancak **ICN'deki etkin noktalar (hotspot'lar)
+görünmüyordu.** Kullanıcı, daha önce **RPK Builder Professional V16.3**
+adlı başka bir araçla üretip FORSDOC'a etkin noktalarıyla birlikte
+**başarıyla** yüklediği bir ICN/IMF çıktısını (`ICN-TB317-00024-001-01.PNG`
++ `IMF-TB317-00024-001-01_000-01.XML`) paylaştı; bu, bizim üretimimizle
+doğrudan karşılaştırıldı.
+
+**Bulunan kesin hata:** `buildImfXml()` fonksiyonu içinde:
+```js
+function buildImfXml(icn){
+  const code = imfIdentFromIcn(icn);   // "ICN-" ön eki doğru şekilde kaldırılıyor
+  ...
+  '<imfCode imfIdentIcn="'+xmlEscape(icn.code)+'" />'   // AMA burada icn.code (ön ekli!) kullanılıyor, code DEĞİL
+```
+`code` değişkeni (ön eksiz, doğru kimlik) hesaplanıyor ama **hiç
+kullanılmıyordu** — dosya adı için doğru şekilde kullanılıyordu
+(`imfFileName()` zaten `imfIdentFromIcn(icn)` çağırıyor, o kısım hep
+doğruydu), ama `imfCode/@imfIdentIcn` XML özniteliği için yanlışlıkla ham
+`icn.code` (`"ICN-TH743-00001-001-01"`, ön ekli) yazılıyordu.
+
+RPK Builder'ın çalışan referans dosyasında bu değer **ön eksiz**:
+```xml
+<imfCode imfIdentIcn="TB317-00024-001-01" />
+```
+(dosya adı `ICN-TB317-00024-001-01.PNG` olsa bile).
+
+**Neden bu, "görsel geliyor ama hotspot gelmiyor" belirtisini açıklıyor:**
+ICN görselinin kendisi, veri modülündeki DOCTYPE/ENTITY + `<graphic
+infoEntityIdent="ICN-...">` bağlantısı üzerinden gösteriliyor — bu
+zaten doğruydu ve etkilenmedi. Ama etkin nokta (hotspot) verisi ayrı bir
+dosyada (IMF) taşınıyor ve FORSDOC muhtemelen bu IMF'yi doğru ICN'e
+`imfIdentIcn` değeri üzerinden eşliyor. Değer yanlış/tutarsız (ön ekli)
+olunca, FORSDOC görseli göstermeye devam ediyor ama hotspot katmanını
+hangi görsele ait olduğunu bulamadığı için sessizce atlıyor.
+
+**Uygulanan düzeltme (tek satır, minimal):**
+```js
+'<imfCode imfIdentIcn="'+xmlEscape(icn.code)+'" />'
+```
+→
+```js
+'<imfCode imfIdentIcn="'+xmlEscape(code)+'" />'
+```
+(`code` değişkeni zaten fonksiyonun en başında doğru şekilde hesaplanmıştı,
+sadece kullanılmıyordu.)
+
+**Ayrıca D-010 GERİ ALINDI:** Aynı RPK referans dosyasında
+`xsi:noNamespaceSchemaLocation` **büyük M ile** `icnMetadata.xsd`
+kullanıyordu — önceki oturumda (D-010) bu, doğrulanmamış bir kullanıcı
+beyanına dayanarak küçük harfe (`icnmetadata.xsd`) çevrilmişti. Bu artık
+gerçek, FORSDOC'ta çalışan bir dosyayla çelişiyor, bu yüzden büyük M'ye
+geri döndürüldü.
+
+**Test sonuçları:** Node.js'te gerçek dosyadan çıkarılan `buildImfXml()`
+ile: `imfIdentIcn` artık `"TH743-00001-001-01"` (ön eksiz) üretiyor,
+`"ICN-"` ön ekli değer bir daha görünmüyor, `icnMetadata.xsd` büyük M ile
+üretiliyor, dosya adı (`imfFileName()`) değişmedi → hepsi PASS.
+
+**Neden hâlâ tam "KAPATILDI" değil:** Bu düzeltme çok güçlü bir kanıta
+(gerçek, hotspot'ları çalışan bir referans dosyayla doğrudan karşılaştırma)
+dayanıyor, ancak **kullanıcının bu düzeltmeyle üretilmiş yeni bir ICN/IMF
+paketini FORSDOC'a tekrar yükleyip etkin noktaların gerçekten göründüğünü
+doğrulaması gerekiyor.** `TODO.md` T-015 olarak izleniyor.
+
+**Kapsam dışı bırakılan (dokunulmadı):** RPK'nın yinelenen hotspot'lar
+için kullandığı `hot174a`/`hot174b` (harf soneki İLK yinelenende de)
+adlandırma biçimi, bizim `hot174`/`hot174b` (ilkinde sonek yok)
+biçiminden farklı — ancak bu yalnızca bir kimlik biçimi tercihi, benzersizlik
+açısından ikisi de geçerli ve bu, hotspot'ların hiç görünmemesi belirtisini
+açıklamıyor. Bu nedenle dokunulmadı; yalnızca bir gözlem notu olarak kayda
+geçirildi.
+
+---
+
 ## D-012 — [İLK TESPİT — SONRADAN GERİ ALINDI, bkz. aşağıda "D-012 — [GERİ ALINDI ⚠️]"]
 
 Bu maddenin ilk hali (`systemCode`'u her zaman 2 karaktere zorlama, `"GA1"`
@@ -395,9 +582,11 @@ genişletildi.)
 
 ---
 
-## D-010 — buildImfXml() içinde schemaLocation dosya adı düzeltmesi: icnMetadata.xsd → icnmetadata.xsd
+## D-010 — [GERİ ALINDI ⚠️, bkz. D-015] buildImfXml() içinde schemaLocation dosya adı — icnMetadata.xsd → icnmetadata.xsd
 
-**Durum:** Kod gerçek dosyada düzeltildi (önceki oturum). Bu oturumda
-değişmedi, regresyon kontrolüyle (`grep icnmetadata.xsd`) doğrulandı.
-Hâlâ yalnızca kullanıcı beyanına dayanıyor — resmi XSD paketiyle bağımsız
-teyit edilmedi (bkz. `TODO.md` T-012).
+**Durum:** Bu düzeltme (küçük harfe çevirme) yalnızca doğrulanmamış bir
+kullanıcı beyanına dayanıyordu. Bu oturumda, kullanıcının **RPK Builder**
+ile üretip FORSDOC'a etkin noktalarıyla birlikte gerçekten başarıyla
+yüklediği bir referans IMF dosyası incelendi ve bu dosyanın **büyük M ile**
+(`icnMetadata.xsd`) kullandığı görüldü. Bu, D-010'un yanlış olduğunu
+gösterdi; büyük M'ye geri döndürüldü. Ayrıntı: `DECISIONS.md` D-015.
