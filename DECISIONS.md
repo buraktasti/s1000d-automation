@@ -7,43 +7,160 @@ Gereken Noktalar".
 
 ---
 
-## D-017 — FAZ 2 DOĞRULANDI ✅: FORSDOC round-trip export ile bayt-seviyesi karşılaştırma — D-016 (MIC bazlı ICN + VM hotspot/legend) gerçek FORSDOC'ta çalışıyor
+## D-021 — fault şeması için figure/hotspot/legend gömme desteği eklendi (UYGULANDI ✅ — dahili testlerle doğrulandı; FORSDOC'ta yeniden import testi bekliyor)
 
-**Durum:** Kullanıcı, bizim uygulamamızın ürettiği bir VM'i (`Yağlama
-Donanımı`, `M0117-AAA-GA1-15-0000-00AA-040A-A`, MIC bazlı ICN
-`ICN-M0117-AAA-GA1150000-A-TH743-00001-A-001-01` ile) FORSDOC'a
-yükledikten sonra FORSDOC'un bu VM'i **geri export ettiği** dosyayı ve
-üretilen **FORIPS PDF** çıktısını paylaştı.
+**Durum:** `injectIcnIntoXml()` önceden yalnızca `descript`, `proced`, `ipd`
+şemalarını destekliyordu; `fault` şeması hiç desteklenmiyordu (kod içinde
+`// fault ve digerlerinde v1'de gomulu figure desteklenmiyor` notuyla
+bilinçli olarak atlanıyordu). D-020 ile "yalnızca RPK/IPD hariç TÜM şema
+türlerinde Resim Açıklaması olacak" kararı netleşince bu eksiklik kapatıldı.
 
-**Yapılan karşılaştırma:** Bizim ürettiğimiz `DMC-M0117-AAA-GA1-15-0000-
-00AA-040A-A_001-00_TR-TR.XML` ile FORSDOC'un export ettiği
-`M0117-AAA-GA1-15-0000-00AA-040A-A.xml`, whitespace/biçim farkları
-normalize edilerek program aracılığıyla **karakter karakter** karşılaştırıldı.
+**Uygulanan düzeltme:** `genFault()`'un ürettiği 5 farklı içerik kalıbının
+(411/412/413/410/varsayılan `faultIsolation`) hepsinde bir
+`<faultDescr>...</faultDescr>` bloğu bulunduğu doğrulandı; figür bu bloğun
+kapanış etiketinden hemen önce ekleniyor. Tek istisna **414
+(`correlatedFault`)** — bu kalıpta `<faultDescr>` yok, figür bu durumda
+`</correlatedFault>`'un içine ekleniyor.
 
-**Sonuç: TÜM içerik (dmCode, 22 hotspot — D-013'ün "hot174"/"hot174b"
-yinelenen-numara çözümü dahil —, legend, koordinatlar, MIC bazlı ICN
-referansı) BİREBİR AYNI.** Yalnızca 3 önemsiz/beklenen fark bulundu:
-1. `<!DOCTYPE dmodule []>` — FORSDOC kendi export'unda ENTITY tanımını
-   siliyor (medyayı kendi içinde yönettiği için; import gereksinimini
-   etkilemiyor).
-2. `inWork="00"` → `"01"` — FORSDOC'un kendi revizyon sayacı (normal).
-3. `<levelledPara>` → `<levelledPara securityClassification="01">` —
-   FORSDOC'un eklediği bir öznitelik. MSB İş Kuralları Excel'inin C16
-   hücresi bunun **koşullu/opsiyonel** olduğunu doğruluyor ("...gizlilik
-   derecesine sahipse... kullanılır"); bizim dosyamız bu öznitelik
-   olmadan zaten sorunsuz kabul edildi, bu yüzden **eksiklik değil.**
+**Test sonuçları:** İzole Node.js testinde 411/412/414 kalıplarının hepsinde
+figürün doğru konuma eklendiği ve `<legend>` üretildiği doğrulandı
+(`node --check` ile ayrıca tüm dosyanın sözdizimi doğrulandı).
 
-**Ek doğrulama:** Kullanıcının paylaştığı FORIPS PDF çıktısında (Şekil 1,
-"Resim Açıklaması" listesi), üretilen tüm 22 hotspot etiketi (0, 30, 35,
-40, 50, 60, 100, 120, 130, 140, 170, 172, 173, 174, 174, 175, 180, 190,
-270, 280, 290, 300) doğru sırada ve doğru başlıklarla görünüyor —
-D-016'nın görsel/yayın çıktısında da doğru çalıştığının kanıtı.
+**Neden hâlâ tam "KAPATILDI" değil:** Bu oturumda **hiçbir gerçek FORSDOC
+import testi yapılmadı** — yalnızca Node.js'te izole fonksiyon testi.
+Kullanıcının bu düzeltmeyle üretilmiş bir `fault` (410/411/412/413/414)
+veri modülünü FORSDOC'a yükleyip figür+legend'in doğru göründüğünü
+doğrulaması gerekiyor.
 
-**Sonuç:** D-014 (xsi:noNamespaceSchemaLocation), D-015 (imfIdentIcn ön
-eksiz), D-016 (MIC bazlı ICN + VM hotspot/legend gömme) **artık yalnızca
-dahili testlerle değil, gerçek FORSDOC import + export + PDF yayın
-zinciriyle uçtan uca doğrulanmıştır.** `TODO.md` T-015/T-016'daki "kullanıcı
-FORSDOC'ta yeniden test etsin" bekleme durumu **KAPATILDI.**
+---
+
+## D-020 — Resim Açıklaması (hotspot+legend) kuralı şema-bazlı hale getirildi: yalnızca IPD/RPK'da yok, diğer TÜM (mevcut) şema türlerinde var (UYGULANDI ✅ — kullanıcı kararıyla netleşti)
+
+**Durum:** D-019'da eklenen ICN-bazlı manuel onay kutusu (`icn.includeLegend`)
+yetersiz kaldı çünkü karar aslında **ICN bazlı değil, şema türü bazlı**ydı.
+Kullanıcı, resmi S1000D BIKE örneğinin IPD (941) veri modülünde hiç
+hotspot/legend gömülü olmadığını fark etti (kanıt: BIKE örneğinin
+`<figure>`'ı yalnızca `<title>`+`<graphic>`, `<hotspot>`/`<legend>` yok),
+oysa Koluman'ın kendi M0117 (Soğutma Donanımı) IPD çıktısında legend
+basılıyordu. Kullanıcı önce "yalnızca RPK'da olmayacak" dedi, sonra ek bir
+mesajda (yanlışlıkla) `ipd`'yi de "olacaklar" listesine dahil etti; açık
+uçlu soruyla netleştirildi: **IPD hariç kalacak, `crew`/`schedul`/
+`checklist`/`process`/`frontmatter`/`container`/`sb` gibi henüz üretim
+fonksiyonu olmayan şema türleri ayrı bir işe (bkz. `TODO.md` T-018)
+ertelendi.**
+
+**Kesin kural (uygulanan hâliyle, `figureBlock()`):**
+```js
+const legendForbiddenBySchema = (schema==='ipd');
+if (!hotspots.length || icn.includeLegend===false || legendForbiddenBySchema){
+  // sade <graphic>, legend yok
+}
+```
+- `schema==='ipd'` → legend **HER ZAMAN** yok, `icn.includeLegend` onay
+  kutusundan bağımsız (zorlanmış kural — BIKE referansıyla doğrulandı).
+- Şu an gerçekten üretilen diğer 3 şema (`descript`, `proced`, `fault`) →
+  legend varsayılan olarak **var**; `descript`/`proced`'de kullanıcı
+  ICN bazında onay kutusuyla kapatabilir (`icn.includeLegend===false`),
+  `fault`'ta da artık aynı mekanizma geçerli (bkz. D-021).
+- `crew`, `schedul`, `checklist`, `process`, `frontmatter`, `container`,
+  `sb` → bu şema türleri için `SUPPORTED_SCHEMAS`'ta hiç üretim fonksiyonu
+  yok; bu kural onlara **henüz uygulanamıyor** (bkz. `TODO.md` T-018,
+  kullanıcı bu turda bu 7 türün ayrı bir iş olarak ele alınmasını
+  onayladı).
+
+**Test sonuçları:** İzole Node.js test matrisinde 6 kombinasyon (ipd+
+varsayılan, ipd+onay-kutusu-açık [yine de zorlanmış kapalı], descript+
+varsayılan, proced+varsayılan, descript+onay-kutusu-kapalı, schema
+parametresiz geriye-dönük-uyum) hepsi beklenen sonucu verdi.
+
+**Neden hâlâ tam "KAPATILDI" değil:** FORSDOC'ta gerçek import testi
+yapılmadı; ayrıca 7 yeni şema türü backlog'da (T-018), o türler için bu
+kural henüz geçerli değil.
+
+---
+
+## D-019 — [D-020 İLE GENİŞLETİLDİ, bkz. yukarı] ICN Oluşturucu'ya "Resim Açıklaması göm" onay kutusu eklendi
+
+**Durum:** Bu, D-020'nin ilk (ve eksik kalan) versiyonuydu — yalnızca ICN
+bazlı manuel bir onay kutusu (`icn.includeLegend`, `icn-legend-toggle`
+UI elemanı) ekleniyordu, şema-bazlı otomatik kural yoktu. Kullanıcının
+BIKE örneği karşılaştırmasıyla bunun yetersiz olduğu ortaya çıktı; D-020
+ile şema-bazlı zorlama eklendi. UI elemanı ve `ICN_LIBRARY` kaydındaki
+`includeLegend` alanı **değişmeden kaldı** — yalnızca `figureBlock()`'un
+karar mantığı D-020 ile genişletildi.
+
+---
+
+## D-018 — genIpd() yalnızca üst montaj satırı üretiyordu; ICN'e bağlı hotspot/parça kayıtları parça kataloğu tablosuna hiç yansımıyordu (ÇÖZÜLDÜ ✅ — kod tarafı; FORSDOC'ta yeniden import testi bekliyor)
+
+**Durum:** Kullanıcının paylaştığı gerçek FORSDOC referans üçlüsüyle
+(resmi S1000D BIKE örneği: XML+FORIPS PDF+ICN ZIP) ve kullanıcının kendi
+gerçek M0117 (Soğutma Donanımı) çıktısıyla (aynı üçlü) karşılaştırma
+yapıldı.
+
+**Kesin bulgu:** M0117 örneğinde Şekil'de **21 farklı hotspot/parça**
+(30, 35, 40, ..., 300) olmasına rağmen, üretilen XML'de yalnızca **TEK bir
+`catalogSeqNumber`** (item="000", üst montaj) vardı — kullanıcının kendi
+FORIPS PDF çıktısında "Tablo 1" de bunu doğruladı (tek satır, hemen
+ardından "Veri Modülü Sonu"). `genIpd(row)` kodu doğrudan incelendi:
+`getIcnForRow(row.dmc)` hiç çağrılmıyordu, `icn.records` (CSV/OCR ile
+zaten içe aktarılmış `partNo`/`partName`/`qty`/`manufacturer` bilgisi)
+hiçbir yerde kullanılmıyordu.
+
+**Uygulanan düzeltme:** Yeni `genIpdPartItemBlocks(row, icn)` fonksiyonu
+eklendi — `icn.records` varsa, VM'nin kendi hotspot sıralamasıyla (artan
+hotspot numarası) her kayıt için ayrı bir `catalogSeqNumber indenture="2"`
+bloğu üretir (`partRef`, `quantityPerNextHigherAssy`, `descrForPart`
+dahil; `item` numarası resmi BIKE örneğindeki gibi ardışık `001,002,...`).
+`genIpd()` üst montaj satırını (`item="000"`) **değiştirmeden** korur,
+yeni blokları bunun ardına ekler.
+
+**Geriye dönük uyumluluk:** ICN bağlı değilse veya `icn.records` boşsa
+`genIpdPartItemBlocks()` boş string döner — eski davranış (tek satır)
+aynen korunuyor, regresyon yok.
+
+**Test sonuçları:** İzole Node.js testinde 4 sahte hotspot kaydı (karışık
+sırada verildi, biri yinelenen numara) doğru şekilde artan sırada ve doğru
+alan eşlemeleriyle üretildi; boş-ICN durumunda `""` döndüğü ayrıca
+doğrulandı.
+
+**Neden hâlâ tam "KAPATILDI" değil:** FORSDOC'ta gerçek import testi
+yapılmadı. Kullanıcının M0117 örneğini bu düzeltmeyle yeniden üretip
+FORSDOC'a yükleyip FORIPS PDF'te Tablo 1'in artık 22 satır (1 üst montaj +
+21 parça) gösterdiğini doğrulaması gerekiyor (bkz. `TODO.md` T-017).
+
+---
+
+## D-017 — Gerçek FORSDOC referans paketleriyle (resmi S1000D BIKE örneği + kullanıcının M0117 gerçek projesi) çapraz karşılaştırma; bir önceki oturumun kendi yanlış varsayımı düzeltildi
+
+**Durum:** Kullanıcı üç dosyalık iki ayrı referans üçlüsü paylaştı: (1)
+resmi S1000D BIKE örneği (XML + FORIPS PDF + ICN ZIP: PNG/CGM + IMF +
+`HotspotMaterials-Malzemeler.json`), (2) kullanıcının kendi M0117 (Soğutma
+Donanımı) projesinden Koluman ile üretilip **FORSDOC'a başarıyla
+yüklenmiş** aynı yapıdaki üçlü.
+
+**Bulgu 1 (D-018'e yol açtı):** IPD parça tablosu eksikliği — yukarı
+bkz. D-018.
+
+**Bulgu 2 (D-020'ye yol açtı):** BIKE örneğinin IPD veri modülünde hiç
+figure/legend gömülü değildi — yukarı bkz. D-020.
+
+**Bulgu 3 (kendi kendini düzeltme — ÖNEMLİ metodolojik not):** İlk analizde
+`HotspotMaterials-Malzemeler.json` dosyasının ve IMF'deki sırasız
+`icnObject` listesinin Koluman'ın kendi ZIP çıktısı olduğu **yanlışlıkla**
+varsayıldı. Bu, gerçek `.html` kaynak kodunda `grep -n "Malzemeler\|
+HotspotMaterials"` çalıştırılarak **çürütüldü**: bu string dosyada hiç
+geçmiyor. `downloadVmZip()` ve `icn-zip-btn` handler'ı yalnızca `.PNG` +
+`IMF-...XML` + `DMC-...XML` üretiyor. Sonuç: **bu JSON dosyası ve IMF'nin
+sırasız hâli, FORSDOC'un ZIP'i import ettikten SONRA kendi CSDB'sinden
+yaptığı export'a ait** — Koluman'ın ürettiği ham ZIP'te hotspot'lar zaten
+`computeIcnHotspotObjects()`'in sıralı çıktısıyla sıralı üretiliyor
+(D-016). Bu bulgu kullanıcıya açıkça düzeltilerek bildirildi.
+
+**Ders (projenin kendi metodolojisiyle tutarlı):** Bir önceki turun/mesajın
+kendi iddiası bile, koda bakılmadan doğru kabul edilmemeli — bu oturumda
+Claude'un kendi ilk varsayımı, gerçek kaynak kod `grep`'lenerek test edildi
+ve yanlış olduğu görülünce düzeltildi.
 
 ---
 

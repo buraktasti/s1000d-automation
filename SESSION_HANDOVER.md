@@ -1,37 +1,71 @@
 # SESSION_HANDOVER.md — Oturum Devir Teslimi
 
-## ALTINCI TUR — FAZ 2 GERÇEK FORSDOC İLE DOĞRULANDI ✅ (D-017)
+## ALTINCI TUR (yeni bir konuşmada devam — gerçek FORSDOC referans üçlüleriyle karşılaştırma, IPD tablo eksikliği ve şema-bazlı legend kuralı bulundu)
 
-Kullanıcı, bizim ürettiğimiz bir VM'i (`Yağlama Donanımı`,
-`GA1-15-0000`, MIC bazlı ICN `ICN-M0117-AAA-GA1150000-A-TH743-00001-A-
-001-01` ile) FORSDOC'a başarıyla yükledi ve şunları paylaştı:
-1. Bizim ürettiğimiz VM (`DMC-...040A-A_001-00...XML`)
-2. FORSDOC'un bu VM'i geri export ettiği hali (`M0117-AAA-GA1-15-...xml`)
-3. FORSDOC/FORIPS PDF yayın çıktısı
-4. MSB İş Kuralları Excel'i (destekleyici referans)
+1. Kullanıcı, resmi S1000D BIKE örneğinin üç dosyasını (XML, FORIPS PDF,
+   ICN ZIP: PNG/CGM+IMF+`HotspotMaterials-Malzemeler.json`) paylaştı, sonra
+   kendi M0117 (Soğutma Donanımı) projesinden Koluman ile üretip **FORSDOC'a
+   başarıyla yüklediği** aynı yapıdaki üçlüyü paylaştı.
+2. Karşılaştırmada M0117'nin FORIPS PDF'inde "Tablo 1"in yalnızca **tek
+   satır** (üst montaj) gösterdiği, oysa Şekil'de **21 hotspot/parça**
+   olduğu görüldü. `genIpd()` kodu doğrudan incelendi: `getIcnForRow()`
+   hiç çağrılmıyordu, `icn.records` kullanılmıyordu.
+3. **D-018 uygulandı:** Yeni `genIpdPartItemBlocks(row, icn)` fonksiyonu,
+   `icn.records`'ı (VM'nin kendi sıralı hotspot listesiyle aynı sırada)
+   ayrı `catalogSeqNumber indenture="2"` bloklarına dönüştürüyor. Üst
+   montaj satırı (`item="000"`) değişmeden korundu; ICN bağlı değilse eski
+   davranış (tek satır) aynen sürüyor.
+4. Kullanıcı, BIKE örneğinin FORIPS PDF'inde görselin altında "Resim
+   Açıklaması" olmadığını, ama M0117'ninkinde olduğunu fark etti. BIKE'ın
+   IPD XML'i incelendi: `<figure>` yalnızca `<title>`+`<graphic>`,
+   `<hotspot>`/`<legend>` hiç yok.
+5. **D-019 uygulandı (ilk versiyon, sonra genişletildi):** ICN Oluşturucu
+   kartına "Resim Açıklaması göm" onay kutusu (`icn.includeLegend`)
+   eklendi, `figureBlock()` bunu kontrol edecek şekilde güncellendi.
+6. Kullanıcı bunun yetersiz olduğunu belirtti: karar ICN bazlı değil,
+   **şema türü bazlı** olmalı — "yalnızca RPK'da olmayacak, diğerlerinde
+   olacak". Sonra bir mesajda yanlışlıkla `ipd`'yi de "olacaklar" listesine
+   dahil etti ve ayrıca `crew`/`schedul`/`checklist`/`process`/
+   `frontmatter`/`container`/`sb` gibi henüz üretim fonksiyonu olmayan
+   şema türlerini de listeledi.
+7. **Çelişki netleştirildi (`ask_user_input_v0` ile):** İki soru
+   soruldu — (a) IPD'de legend olacak mı? → **Hayır, IPD hariç kalacak**
+   (listeye yanlışlıkla girmiş); (b) 7 yeni şema türü için nasıl
+   ilerlenecek? → **Şimdilik yalnızca mevcut 4 şemada kural kesinleştirilsin,
+   yenileri ayrı bir iş (T-018) olarak backlog'a alınsın.**
+8. **D-020 uygulandı:** `figureBlock(icn, figId, schema)` artık `schema`
+   parametresi alıyor; `legendForbiddenBySchema = (schema==='ipd')` —
+   yalnızca IPD'de legend zorla kapalı (onay kutusundan bağımsız), diğer
+   tüm mevcut şemalarda (descript/proced varsayılan açık; fault de dahil)
+   var. `injectIcnIntoXml()` artık `schema`'yı `figureBlock`'a iletiyor.
+9. **D-021 uygulandı:** `injectIcnIntoXml()`'e `fault` şeması desteği
+   eklendi — önceden hiç yoktu. `genFault()`'un 5 kalıbının 4'ünde
+   (`<faultDescr>` olanlar: 411/412/413/410/varsayılan) figür
+   `</faultDescr>`'dan önce, 414'te (`<faultDescr>` yok) `</correlatedFault>`
+   içine ekleniyor.
+10. **Kendi hatasını düzeltme (D-017):** Analiz sırasında
+    `HotspotMaterials-Malzemeler.json`'ın ve IMF'nin sırasız hotspot
+    listesinin Koluman'ın kendi çıktısı olduğu yanlışlıkla varsayılmıştı.
+    Gerçek `.html` kaynağında `grep -n "Malzemeler\|HotspotMaterials"`
+    çalıştırılarak bu string'in dosyada hiç geçmediği, dolayısıyla bu
+    dosyaların FORSDOC'un kendi export'una ait olduğu tespit edildi ve
+    kullanıcıya açıkça düzeltilerek bildirildi.
 
-**Program aracılığıyla bayt-seviyesi karşılaştırma yapıldı:** İki dosya
-arasındaki TÜM hotspot/legend/dmCode/ICN referansı içeriği **birebir
-aynı** çıktı. Yalnızca FORSDOC'un kendi normalizasyon farkları var
-(DOCTYPE/ENTITY temizleme, inWork revizyon artışı, opsiyonel
-`securityClassification` eklenmesi — MSB İş Kuralları C16 ile bu son
-farkın koşullu/opsiyonel olduğu teyit edildi).
+**Test:** Her adımda `node --check` ile sözdizimi doğrulandı; her yeni/
+değişen fonksiyon (`genIpdPartItemBlocks`, `figureBlock` 6 senaryo
+matrisi, `injectIcnIntoXml` fault kalıpları) gerçek `.html` dosyasından
+programatik olarak çıkarılıp izole Node.js testleriyle doğrulandı. **Bu
+oturumda hiçbir gerçek FORSDOC import testi yapılmadı.**
 
-**Sonuç:** Faz 2'de uygulanan D-014, D-015, D-016 (MIC bazlı ICN, VM
-hotspot/legend gömme, xsi:noNamespaceSchemaLocation, imfIdentIcn ön eki)
-artık yalnızca dahili Node.js testleriyle değil, **gerçek FORSDOC
-import + export + PDF yayın zinciriyle uçtan uca doğrulanmıştır.**
-`TODO.md` T-015 ve T-016 **KAPATILDI.** Bu turda **hiçbir kod değişikliği
-yapılmadı** — yalnızca doğrulama ve hafıza dosyası güncellemesi.
+**Bilinçli olarak YAPILMAYAN:** 7 yeni şema türü (`crew`, `schedul`,
+`checklist`, `process`, `frontmatter`, `container`, `sb`) için üretim
+fonksiyonu yazımı — kullanıcı onayıyla ayrı bir işe (T-018) ertelendi.
 
-**Kalan açık noktalar (değişmedi):**
-- SNS ağacında "ICN kütüphanesi tarayıcısı" ekranı hâlâ yok (bilinçli
-  olarak eklenmedi).
-- Sistem/Alt Sistem seviyelerinde gerçek VM/ICN örneği hâlâ yok, yalnızca
-  "Alt Alt Sistem" seviyesi kanıtlı.
-- "A" placeholder'ının (sorumlu firma kodu/varyant) DERMAN için tam
-  gerekçesi hâlâ DOĞRULANAMADI (ama gerçek FORSDOC kabul testiyle dolaylı
-  olarak sorunsuz olduğu görüldü).
+**Bir sonraki adım: kullanıcının M0117 örneğini bu düzeltmelerle yeniden
+üretip FORSDOC'a yükleyip (a) IPD Tablo'nun 22 satır gösterdiğini, (b)
+IPD'de legend basılmadığını, (c) descript/proced'de regresyon olmadığını,
+(d) bir fault örneğinde figure/legend'in doğru göründüğünü doğrulaması**
+(bkz. `TODO.md` T-017).
 
 ---
 

@@ -252,6 +252,20 @@
           <label>Başlık</label><input type="text" id="icn-title-field" placeholder="Örn. Motor Bloğu Kapak ve Conta Seti">
         </div>
         <div class="field">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:normal;">
+            <input type="checkbox" id="icn-legend-toggle" checked>
+            VM içine "Resim Açıklaması" (hotspot + legend) göm
+          </label>
+          <div class="hint" style="margin-top:2px;">
+            <b>IPD (RPK) şema türünde bu ayardan bağımsız olarak legend HİÇ eklenmez</b> — resmi S1000D BIKE
+            örneğiyle doğrulandı: IPD'de parça bilgisi zaten Tablo'da (catalogSeqNumber) var, resmin altında
+            tekrar basılmaz. Bu onay kutusu yalnızca <b>descript</b> ve <b>proced</b> şema türlerini etkiler:
+            açıksa (varsayılan), D-016/D-017'de FORSDOC ile doğrulanmış şekilde her hotspot VM'nin
+            &lt;figure&gt; bloğuna gömülür ve görselin altına bir parça listesi (legend) basılır; kapatılırsa
+            sade bir &lt;graphic&gt; referansı üretilir.
+          </div>
+        </div>
+        <div class="field">
           <label>Hangi VM'e/VM'lere bağlanacak? (aynı görsel birden fazla VM'e bağlanabilir)</label>
           <div id="icn-target-checklist" style="max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px;"></div>
         </div>
@@ -1076,11 +1090,20 @@ function icnDoctype(icnCode){
   // S1000D VM'lerinde infoEntityIdent bir DTD ENTITY referansıdır; DOCTYPE içinde tanımlanmalı.
   return '<!DOCTYPE dmodule [<!ENTITY '+icnCode+' SYSTEM "'+icnCode+'.PNG" NDATA png><!NOTATION png PUBLIC "-//W3C//NOTATION PNG 1.0//EN">]>\n';
 }
-function figureBlock(icn, figId){
+function figureBlock(icn, figId, schema){
   const fid = xmlEscape(figId||'fig-0001');
   const hotspots = computeIcnHotspotObjects(icn);
-  if (!hotspots.length){
-    // D-016: hiç hotspot tanımlanmamış bir ICN için eski (self-closing) davranış korunur — regresyon yok.
+  // D-020 (öneri, bu oturumda uygulandı): resmi S1000D BIKE örneğinin IPD (941/RPK) veri modülünde <figure>
+  // bloğuna hiç hotspot/legend gömülmediği doğrulandı — çünkü IPD şemasında parça bilgisi zaten ayrı bir
+  // <illustratedPartsCatalog><catalogSeqNumber> tablosunda (Tablo 1) veriliyor; "Resim Açıklaması" orada
+  // TEKRAR basmak anlamına gelirdi. descript/proced gibi ayrı bir parça tablosu OLMAYAN şemalarda ise resmin
+  // altında açıklayıcı bir liste faydalı/beklenen. Bu yüzden kural artık ŞEMA TÜRÜNE göre otomatik:
+  //  - schema==='ipd' (RPK)  → legend HİÇBİR ZAMAN eklenmez (kullanıcı onay kutusundan bağımsız).
+  //  - diğer şemalar (descript, proced) → D-016/D-017'de doğrulanmış hotspot+legend davranışı sürer;
+  //    kullanıcı yine de ICN Oluşturucu'daki "Resim Açıklaması göm" onay kutusuyla (icn.includeLegend) bunu
+  //    ICN bazında kapatabilir.
+  const legendForbiddenBySchema = (schema==='ipd');
+  if (!hotspots.length || icn.includeLegend===false || legendForbiddenBySchema){
     return '<figure id="'+fid+'">\n' +
            '          <title>'+xmlEscape(icn.title||icn.code)+'</title>\n' +
            '          <graphic infoEntityIdent="'+xmlEscape(icn.code)+'" />\n' +
@@ -1102,7 +1125,7 @@ function figureBlock(icn, figId){
          '        </figure>';
 }
 function injectIcnIntoXml(xml, schema, icn){
-  const fig = figureBlock(icn);
+  const fig = figureBlock(icn, undefined, schema);
   if (schema==='descript'){
     return xml.replace('</levelledPara>', '        '+fig+'\n      </levelledPara>');
   }
@@ -1112,7 +1135,19 @@ function injectIcnIntoXml(xml, schema, icn){
   if (schema==='ipd'){
     return xml.replace('<illustratedPartsCatalog>', '<illustratedPartsCatalog>\n    '+fig);
   }
-  return xml; // fault ve digerlerinde v1'de gomulu figure desteklenmiyor
+  if (schema==='fault'){
+    // D-021 (öneri, bu oturumda uygulandı): "yalnızca RPK/IPD'de Resim Açıklaması olmayacak, DİĞER TÜM şema
+    // türlerinde olacak" kuralı gereği fault şeması da artık desteklenir — önceden hiç desteklenmiyordu.
+    // genFault()'un ürettiği 5 farklı içerik kalıbının (411/412/413/410/varsayılan faultIsolation) hepsinde
+    // bir <faultDescr>...</faultDescr> bloğu vardır (411'de <locateAndRepair> içinde de yer alır ama
+    // <faultDescr> yine de mevcuttur); figürü bunun içine, kapanış etiketinden hemen önce ekliyoruz. Yalnızca
+    // 414 (correlatedFault) kalıbında <faultDescr> yoktur — o durumda figürü <correlatedFault>'un içine ekliyoruz.
+    if (xml.indexOf('</faultDescr>') !== -1){
+      return xml.replace('</faultDescr>', '          '+fig+'\n        </faultDescr>');
+    }
+    return xml.replace('</correlatedFault>', '        '+fig+'\n      </correlatedFault>');
+  }
+  return xml;
 }
 function generateXmlWithIcn(row){
   let xml = generateXml(row);
@@ -1263,7 +1298,38 @@ function genFault(row){
   }
   return dmHeader('fault') + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
 }
+// D-018 (öneri, bu oturumda uygulandı): ICN'e bağlı hotspot/parça kayıtlarını (varsa), VM'nin kendi
+// hotspot sıralamasıyla (computeIcnHotspotObjects'teki gibi artan hotspot numarasına göre) parça kataloğu
+// satırlarına dönüştürür. Önceden yalnızca üst montaj (item="000") üretiliyordu; ICN'e bağlı parçalar
+// Resim Açıklaması'nda (VM legend) görünse de Tablo'ya (catalogSeqNumber) hiç yansımıyordu — kullanıcının
+// gerçek FORSDOC FORIPS PDF çıktısıyla (M0117 Soğutma Donanımı örneği, 21 hotspot'a karşılık Tablo'da
+// yalnızca 1 satır) doğrulandı. ICN bağlı değilse veya hiç hotspot kaydı yoksa eski davranış (yalnızca
+// üst montaj satırı) AYNEN korunuyor — regresyon yok.
+function genIpdPartItemBlocks(row, icn){
+  if (!icn || !icn.records || !icn.records.length) return '';
+  const sorted = icn.records.slice().sort(function(a,b){
+    return (parseInt(a.hotspot)||0) - (parseInt(b.hotspot)||0);
+  });
+  return sorted.map(function(r, idx){
+    // Resmi Bike örneğindeki gibi item numarası ardışıktır (001, 002, ...) — hotspot etiketinin kendisi
+    // değildir; hotspot numarası zaten descrForPart/partRef ile birlikte ayrı bir bilgi olarak taşınıyor.
+    const itemNo = String(idx+1).padStart(3,'0');
+    return '      <catalogSeqNumber indenture="2" systemCode="'+xmlEscape(row.dmc.split('-')[2])+'" subSystemCode="'+xmlEscape(row.altAltSis.charAt(0))+'"\n' +
+      '                        subSubSystemCode="'+xmlEscape(row.altAltSis.charAt(1))+'" assyCode="'+xmlEscape(row.bilesen)+'" figureNumber="01" item="'+itemNo+'">\n' +
+      '        <itemSeqNumber itemSeqNumberValue="00A">\n' +
+      '          <reasonForSelection reasonForSelectionValue="1" />\n' +
+      '          <quantityPerNextHigherAssy>'+xmlEscape(r.qty||'1')+'</quantityPerNextHigherAssy>\n' +
+      '          <partRef manufacturerCodeValue="'+xmlEscape(r.manufacturer||SETTINGS.cage)+'" partNumberValue="'+xmlEscape(r.partNo||'')+'" />\n' +
+      '          <partSegment>\n' +
+      '            <itemIdentData><descrForPart>'+xmlEscape(r.partName||r.description||('Konum '+r.hotspot))+'</descrForPart></itemIdentData>\n' +
+      '          </partSegment>\n' +
+      '        </itemSeqNumber>\n' +
+      '      </catalogSeqNumber>';
+  }).join('\n');
+}
 function genIpd(row){
+  const icn = getIcnForRow(row.dmc);
+  const itemBlocks = genIpdPartItemBlocks(row, icn);
   const content = '  <content>\n' +
     '    <illustratedPartsCatalog>\n' +
     '      <catalogSeqNumber indenture="1" systemCode="'+xmlEscape(row.dmc.split('-')[2])+'" subSystemCode="'+xmlEscape(row.altAltSis.charAt(0))+'"\n' +
@@ -1277,6 +1343,7 @@ function genIpd(row){
     '          </partSegment>\n' +
     '        </itemSeqNumber>\n' +
     '      </catalogSeqNumber>\n' +
+    (itemBlocks ? itemBlocks + '\n' : '') +
     '    </illustratedPartsCatalog>\n' +
     '  </content>';
   return dmHeader('ipd') + identAndStatus(row, row.infoName) + '\n' + content + FOOTER;
@@ -1682,11 +1749,13 @@ document.getElementById('icn-save-btn').onclick = function(){
     }
   }
 
+  const includeLegend = document.getElementById('icn-legend-toggle').checked;
   const existingIdx = ICN_LIBRARY.findIndex(function(i){ return i.code===code; });
   const icnEntry = {
     code: code, title: title, imageDataUrl: ICN_IMAGE.dataUrl,
     naturalWidth: ICN_IMAGE.naturalWidth, naturalHeight: ICN_IMAGE.naturalHeight,
     records: ICN_RECORDS.map(function(r){ return Object.assign({}, r); }),
+    includeLegend: includeLegend,
     method: method,
     systemCode: snsKeys.systemCode, subSystemCode: snsKeys.subSystemCode,
     subSubSystemCode: snsKeys.subSubSystemCode, assyCode: snsKeys.assyCode,

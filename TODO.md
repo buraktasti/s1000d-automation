@@ -46,19 +46,90 @@ kontrol edilmeli.
   yeniden test edilmeli.
 - Detay: `DECISIONS.md` D-011.
 
-## T-016 — [KAPATILDI ✅ — GERÇEK FORSDOC İLE DOĞRULANDI, bkz. D-017] FAZ 2: MIC bazlı ICN + VM hotspot/legend gömme + SNS eşleştirme
-- Kullanıcı, bizim ürettiğimiz bir VM'i FORSDOC'a yükleyip geri export
-  ettiği dosyayı ve FORIPS PDF çıktısını paylaştı. Bayt-seviyesi
-  karşılaştırma: TÜM hotspot/legend/ICN içeriği birebir aynı, yalnızca
-  FORSDOC'un kendi normalizasyon farkları (DOCTYPE, inWork, opsiyonel
-  securityClassification) var. Detay: `DECISIONS.md` D-017.
-- Kalan açık nokta: SNS ağacında "ICN kütüphanesi tarayıcısı" ekranı hâlâ
-  yok (bilinçli olarak eklenmedi, kullanıcı isterse ayrıca talep etmeli).
-- "A" placeholder'ının (sorumlu firma kodu/varyant) doğruluğu da bu
-  gerçek testle dolaylı doğrulandı (FORSDOC hiçbir hata vermeden kabul
-  etti).
+## T-017 — [YENİ — KULLANICI FORSDOC'TA YENİDEN TEST ETMELİ] IPD parça tablosu genişletmesi + şema-bazlı Resim Açıklaması kuralı
+- **Kaynak:** Gerçek FORSDOC referans üçlüsü (resmi S1000D BIKE örneği +
+  kullanıcının M0117 gerçek projesi) karşılaştırması. Detay: `DECISIONS.md`
+  D-017, D-018, D-019, D-020, D-021.
+- **Uygulanan 3 değişiklik:**
+  1. `genIpdPartItemBlocks()` — IPD'de ICN'e bağlı hotspot/parça kayıtları
+     artık `catalogSeqNumber` tablosuna tek tek yansıyor (önceden yalnızca
+     üst montaj satırı vardı).
+  2. `figureBlock()` — Resim Açıklaması (hotspot+legend) kuralı şema-bazlı:
+     yalnızca `ipd` (RPK) hariç, `descript`/`proced`/`fault` dahil tüm
+     mevcut şema türlerinde varsayılan olarak var.
+  3. `injectIcnIntoXml()` — `fault` şeması için figure/legend gömme desteği
+     eklendi (önceden hiç yoktu).
+- **Test sonuçları:** Node.js'te izole fonksiyon testleriyle doğrulandı
+  (genIpdPartItemBlocks sıralama/alan eşlemesi, figureBlock 6 senaryo
+  matrisi, injectIcnIntoXml 411/412/414 fault kalıpları). `node --check`
+  ile tüm dosyanın sözdizimi doğrulandı.
+- **Neden hâlâ açık:** Bu oturumda **hiçbir gerçek FORSDOC import testi
+  yapılmadı.** Kullanıcının şunları FORSDOC'ta yeniden test edip
+  bildirmesi gerekiyor:
+  1. M0117 (Soğutma Donanımı) örneğini bu düzeltmeyle yeniden üretip
+     FORSDOC'a yüklemek; FORIPS PDF'te Tablo 1'in artık 22 satır (1 üst
+     montaj + 21 parça) gösterdiğini doğrulamak.
+  2. IPD (RPK) çıktısında Resim Açıklaması'nın artık hiç basılmadığını
+     doğrulamak (BIKE örneğiyle tutarlı olmalı).
+  3. `descript`/`proced` çıktılarında Resim Açıklaması'nın hâlâ (önceki
+     gibi) doğru bastığını doğrulamak — regresyon kontrolü.
+  4. En az bir `fault` (410/411/412/413/414) veri modülünü FORSDOC'a
+     yükleyip figür+legend'in doğru göründüğünü doğrulamak (bu şema türü
+     için ilk kez test ediliyor).
 
-## T-015 — [KAPATILDI ✅ — GERÇEK FORSDOC İLE DOĞRULANDI, bkz. D-017] ICN'de etkin noktalar (hotspot) görünmüyordu — imfIdentIcn "ICN-" ön eki hatası
+## T-018 — [YENİ — BEKLEMEDE / KULLANICI KARARI GEREKLİ] 7 yeni şema türü için üretim fonksiyonu yok: crew, schedul, checklist, process, frontmatter, container, sb
+- **Kaynak:** Kullanıcı, Resim Açıklaması kuralının kapsamını genişletirken
+  bu 7 şema türünü de listeledi. `SUPPORTED_SCHEMAS = ['descript','proced',
+  'fault','ipd']` (satır ~339) bunların hiçbirini içermiyor;
+  `schedul` kısmen `INFO_SCHEMA`'da eşleniyor (`'0B0':'schedul'`) ama
+  `generateXml()`'in switch'inde bir `case 'schedul'` yok (zaten T-002'de
+  not edilmişti).
+- **Kullanıcı kararı (bu oturumda netleşti):** Bu 7 şema türü için üretim
+  fonksiyonu yazmak **ayrı, daha büyük kapsamlı bir iş** olarak ele
+  alınacak; bu oturumda dokunulmadı. Bir sonraki oturumda kullanıcı hangi
+  şema türünün önce ele alınacağına (muhtemelen `schedul`, T-002 ile
+  aynı öncelik) karar vermeli.
+- **Not:** Bu türler için üretim fonksiyonu eklendiğinde, D-020'deki
+  "yalnızca ipd hariç tüm şemalarda Resim Açıklaması var" kuralı
+  `figureBlock()`/`injectIcnIntoXml()`'e otomatik olarak uygulanmalı
+  (kod zaten `schema==='ipd'` dışındaki HER şema için varsayılan `true`
+  döner — yeni şema `injectIcnIntoXml()`'e bir `if (schema==='YENİ')` dalı
+  olarak eklendiği sürece ek bir değişiklik gerekmez).
+
+
+## T-016 — [YENİ — KULLANICI FORSDOC'TA YENİDEN TEST ETMELİ] FAZ 2: MIC bazlı ICN + VM hotspot/legend gömme + SNS eşleştirme
+- **Kaynak:** Üç Faz 1 analiz turunda toplanan gerçek FORSDOC export
+  verisi (Temel Motor + Egzoz Sistemi ICN/VM çiftleri) ve resmi "Bilgi
+  Kontrol Numarası" eğitim materyali.
+- **Uygulanan 3 değişiklik:**
+  1. MIC bazlı ICN üretimi (`nextIcnCodeMic()`) — Firma Kodlu üretim
+     (`nextIcnCode()`) hiç bozulmadan, UI'da radyo seçimiyle eklendi.
+  2. VM `<graphic>` içine `<hotspot>` + `<legend>` gömme
+     (`figureBlock()` yeniden yazıldı) — IMF ile VM hotspot verisi artık
+     `computeIcnHotspotObjects()` üzerinden ortak kaynaktan geliyor.
+  3. SNS hiyerarşik eşleştirme fonksiyonu (`icnBelongsToSnsNode`) ve
+     `ICN_LIBRARY` veri modeli genişletmesi (`systemCode/subSystemCode/
+     subSubSystemCode/assyCode` + hesaplanmış anahtarlar).
+- **Test sonuçları:** 52/52 dahili test PASS (bkz. `DECISIONS.md` D-016).
+  Gerçek Egzoz Sistemi VM+ICN çiftiyle uçtan uca üretim, gerçek FORSDOC
+  dosyasıyla yapısal olarak karşılaştırıldı.
+- **Neden hâlâ açık / kullanıcıdan beklenenler:**
+  1. **FORSDOC'ta gerçek import testi yapılmadı** — kullanıcının bu
+     düzeltmeyle üretilmiş yeni paketleri (hem Firma Kodlu hem MIC bazlı)
+     FORSDOC'a yükleyip sonucu bildirmesi gerekiyor.
+  2. **"A" placeholder'ının (sorumlu firma kodu/varyant) DERMAN için
+     doğruluğu** hâlâ DOĞRULANAMADI — yalnızca gözlemlenen sabit değer
+     kullanıldı.
+  3. **SNS ağacında "ICN kütüphanesi tarayıcısı" ekranı henüz yok** —
+     `icnBelongsToSnsNode()` fonksiyonu hazır ama hiçbir UI ekranına
+     bağlanmadı (spekülatif özellik icat etmemek için bilinçli olarak
+     bu turda eklenmedi). Kullanıcı bu ekranın tam olarak nasıl
+     görüneceğine karar verirse eklenebilir.
+  4. Sistem/Alt Sistem seviyelerinde gerçek VM/ICN örneği hâlâ yok —
+     yalnızca "Alt Alt Sistem" seviyesi (assyCode="0000") gerçek veriyle
+     kanıtlı.
+
+## T-015 — [YENİ — KULLANICI FORSDOC'TA YENİDEN TEST ETMELİ] ICN'de etkin noktalar (hotspot) görünmüyordu — imfIdentIcn "ICN-" ön eki hatası
 - **Kaynak:** D-014 sonrası VM+ICN FORSDOC'a başarıyla yüklendi, ama
   ICN'deki etkin noktalar görünmüyordu. Kullanıcı, RPK Builder
   Professional V16.3 ile üretip FORSDOC'a etkin noktalarıyla birlikte
